@@ -1,1 +1,1 @@
-# vizpix
+# Vizpix
