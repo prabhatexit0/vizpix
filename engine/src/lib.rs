@@ -1,5 +1,5 @@
-use image::{DynamicImage, ImageReader, RgbaImage, Rgba};
 use image::imageops::FilterType;
+use image::{DynamicImage, ImageReader, Rgba, RgbaImage};
 use std::io::Cursor;
 use wasm_bindgen::prelude::*;
 
@@ -29,10 +29,11 @@ fn encode_jpeg(img: &DynamicImage, quality: u8) -> Result<Vec<u8>, JsError> {
 
 fn blend_channel(base: f32, top: f32, mode: u32) -> f32 {
     match mode {
-        0 => top, // normal
-        1 => base * top, // multiply
+        0 => top,                              // normal
+        1 => base * top,                       // multiply
         2 => 1.0 - (1.0 - base) * (1.0 - top), // screen
-        3 => { // overlay
+        3 => {
+            // overlay
             if base < 0.5 {
                 2.0 * base * top
             } else {
@@ -41,20 +42,32 @@ fn blend_channel(base: f32, top: f32, mode: u32) -> f32 {
         }
         4 => base.min(top), // darken
         5 => base.max(top), // lighten
-        6 => { // color-dodge
-            if top >= 1.0 { 1.0 } else { (base / (1.0 - top)).min(1.0) }
+        6 => {
+            // color-dodge
+            if top >= 1.0 {
+                1.0
+            } else {
+                (base / (1.0 - top)).min(1.0)
+            }
         }
-        7 => { // color-burn
-            if top <= 0.0 { 0.0 } else { (1.0 - (1.0 - base) / top).max(0.0) }
+        7 => {
+            // color-burn
+            if top <= 0.0 {
+                0.0
+            } else {
+                (1.0 - (1.0 - base) / top).max(0.0)
+            }
         }
-        8 => { // hard-light
+        8 => {
+            // hard-light
             if top < 0.5 {
                 2.0 * base * top
             } else {
                 1.0 - 2.0 * (1.0 - base) * (1.0 - top)
             }
         }
-        9 => { // soft-light
+        9 => {
+            // soft-light
             if top < 0.5 {
                 base - (1.0 - 2.0 * top) * base * (1.0 - base)
             } else {
@@ -66,13 +79,14 @@ fn blend_channel(base: f32, top: f32, mode: u32) -> f32 {
                 base + (2.0 * top - 1.0) * (d - base)
             }
         }
-        10 => (base - top).abs(), // difference
+        10 => (base - top).abs(),            // difference
         11 => base + top - 2.0 * base * top, // exclusion
-        _ => top, // fallback to normal
+        _ => top,                            // fallback to normal
     }
 }
 
 #[wasm_bindgen]
+#[allow(clippy::too_many_arguments)]
 pub fn composite_and_export(
     canvas_width: u32,
     canvas_height: u32,
@@ -131,12 +145,7 @@ pub fn composite_and_export(
         // Compute AABB of the transformed layer on canvas
         let hlw = lw as f64 / 2.0;
         let hlh = lh as f64 / 2.0;
-        let corners = [
-            (-hlw, -hlh),
-            (hlw, -hlh),
-            (hlw, hlh),
-            (-hlw, hlh),
-        ];
+        let corners = [(-hlw, -hlh), (hlw, -hlh), (hlw, hlh), (-hlw, hlh)];
 
         let mut min_x = f64::MAX;
         let mut min_y = f64::MAX;
@@ -241,7 +250,9 @@ pub fn decode_images_batch(
     lengths: &[u32],
 ) -> Result<Vec<u8>, JsError> {
     if offsets.len() != lengths.len() {
-        return Err(JsError::new("offsets and lengths must have the same length"));
+        return Err(JsError::new(
+            "offsets and lengths must have the same length",
+        ));
     }
 
     let mut output = Vec::new();
@@ -250,7 +261,9 @@ pub fn decode_images_batch(
         let start = offsets[i] as usize;
         let len = lengths[i] as usize;
         if start + len > packed.len() {
-            return Err(JsError::new(&format!("Image {i} exceeds packed buffer bounds")));
+            return Err(JsError::new(&format!(
+                "Image {i} exceeds packed buffer bounds"
+            )));
         }
         let slice = &packed[start..start + len];
         let img = decode_image(slice)?;
@@ -292,7 +305,13 @@ pub fn rotate_image(input: &[u8], degrees: u32) -> Result<Vec<u8>, JsError> {
 }
 
 #[wasm_bindgen]
-pub fn crop_image(input: &[u8], x: u32, y: u32, width: u32, height: u32) -> Result<Vec<u8>, JsError> {
+pub fn crop_image(
+    input: &[u8],
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+) -> Result<Vec<u8>, JsError> {
     let img = decode_image(input)?;
     let (iw, ih) = (img.width(), img.height());
 
@@ -310,7 +329,12 @@ pub fn crop_image(input: &[u8], x: u32, y: u32, width: u32, height: u32) -> Resu
 }
 
 #[wasm_bindgen]
-pub fn adjust_image(input: &[u8], brightness: f32, contrast: f32, saturation: f32) -> Result<Vec<u8>, JsError> {
+pub fn adjust_image(
+    input: &[u8],
+    brightness: f32,
+    contrast: f32,
+    saturation: f32,
+) -> Result<Vec<u8>, JsError> {
     let img = decode_image(input)?;
 
     // brightness: -100..100 mapped to brighten's i32 range
@@ -396,7 +420,7 @@ fn box_blur_pass(src: &[f32], dst: &mut [f32], w: usize, h: usize, radius: usize
                 let y = (iy as isize - radius as isize).clamp(0, h as isize - 1) as usize;
                 acc += tmp[(y * w + x) * channels + c];
             }
-            dst[(0 * w + x) * channels + c] = acc * inv;
+            dst[x * channels + c] = acc * inv;
             for y in 1..h {
                 let add_y = (y as isize + r as isize).min(h as isize - 1) as usize;
                 let rem_y = (y as isize - r as isize - 1).max(0) as usize;
@@ -412,10 +436,10 @@ fn build_gaussian_kernel(radius: usize) -> Vec<f32> {
     let size = 2 * radius + 1;
     let mut kernel = vec![0.0f32; size];
     let mut sum = 0.0f32;
-    for i in 0..size {
+    for (i, k) in kernel.iter_mut().enumerate().take(size) {
         let x = i as f32 - radius as f32;
         let val = (-x * x / (2.0 * sigma * sigma)).exp();
-        kernel[i] = val;
+        *k = val;
         sum += val;
     }
     for v in kernel.iter_mut() {
@@ -424,15 +448,23 @@ fn build_gaussian_kernel(radius: usize) -> Vec<f32> {
     kernel
 }
 
-fn convolve_horizontal(src: &[f32], dst: &mut [f32], w: usize, h: usize, channels: usize, kernel: &[f32]) {
+fn convolve_horizontal(
+    src: &[f32],
+    dst: &mut [f32],
+    w: usize,
+    h: usize,
+    channels: usize,
+    kernel: &[f32],
+) {
     let radius = kernel.len() / 2;
     for y in 0..h {
         for x in 0..w {
             for c in 0..channels {
                 let mut acc = 0.0f32;
-                for k in 0..kernel.len() {
-                    let sx = (x as isize + k as isize - radius as isize).clamp(0, w as isize - 1) as usize;
-                    acc += src[(y * w + sx) * channels + c] * kernel[k];
+                for (k, &kv) in kernel.iter().enumerate() {
+                    let sx = (x as isize + k as isize - radius as isize).clamp(0, w as isize - 1)
+                        as usize;
+                    acc += src[(y * w + sx) * channels + c] * kv;
                 }
                 dst[(y * w + x) * channels + c] = acc;
             }
@@ -440,15 +472,23 @@ fn convolve_horizontal(src: &[f32], dst: &mut [f32], w: usize, h: usize, channel
     }
 }
 
-fn convolve_vertical(src: &[f32], dst: &mut [f32], w: usize, h: usize, channels: usize, kernel: &[f32]) {
+fn convolve_vertical(
+    src: &[f32],
+    dst: &mut [f32],
+    w: usize,
+    h: usize,
+    channels: usize,
+    kernel: &[f32],
+) {
     let radius = kernel.len() / 2;
     for y in 0..h {
         for x in 0..w {
             for c in 0..channels {
                 let mut acc = 0.0f32;
-                for k in 0..kernel.len() {
-                    let sy = (y as isize + k as isize - radius as isize).clamp(0, h as isize - 1) as usize;
-                    acc += src[(sy * w + x) * channels + c] * kernel[k];
+                for (k, &kv) in kernel.iter().enumerate() {
+                    let sy = (y as isize + k as isize - radius as isize).clamp(0, h as isize - 1)
+                        as usize;
+                    acc += src[(sy * w + x) * channels + c] * kv;
                 }
                 dst[(y * w + x) * channels + c] = acc;
             }
@@ -488,7 +528,7 @@ pub fn apply_blur(input: &[u8], radius: u32, blur_type: &str) -> Result<Vec<u8>,
             box_blur_pass(&pixels, &mut tmp, w, h, r, 4);
             pixels.copy_from_slice(&tmp);
         }
-        "gaussian" | _ => {
+        _ => {
             gaussian_blur_f32(&mut pixels, w, h, 4, r);
         }
     }
@@ -500,7 +540,12 @@ pub fn apply_blur(input: &[u8], radius: u32, blur_type: &str) -> Result<Vec<u8>,
 }
 
 #[wasm_bindgen]
-pub fn apply_sharpen(input: &[u8], amount: f32, radius: u32, threshold: u32) -> Result<Vec<u8>, JsError> {
+pub fn apply_sharpen(
+    input: &[u8],
+    amount: f32,
+    radius: u32,
+    threshold: u32,
+) -> Result<Vec<u8>, JsError> {
     if amount == 0.0 || radius == 0 {
         return Ok(input.to_vec());
     }
@@ -557,9 +602,15 @@ pub fn compute_histogram(input: &[u8]) -> Result<Vec<u8>, JsError> {
 
     // Pack as little-endian: 3 × 256 × 4 = 3072 bytes
     let mut out = Vec::with_capacity(3072);
-    for v in &r_hist { out.extend_from_slice(&v.to_le_bytes()); }
-    for v in &g_hist { out.extend_from_slice(&v.to_le_bytes()); }
-    for v in &b_hist { out.extend_from_slice(&v.to_le_bytes()); }
+    for v in &r_hist {
+        out.extend_from_slice(&v.to_le_bytes());
+    }
+    for v in &g_hist {
+        out.extend_from_slice(&v.to_le_bytes());
+    }
+    for v in &b_hist {
+        out.extend_from_slice(&v.to_le_bytes());
+    }
     Ok(out)
 }
 
@@ -598,7 +649,9 @@ fn median_cut(pixels: &[[u8; 3]], num_colors: usize) -> Vec<[u8; 3]> {
         let mut best_idx = 0;
         let mut best_range = 0u32;
         for (i, bucket) in buckets.iter().enumerate() {
-            if bucket.len() < 2 { continue; }
+            if bucket.len() < 2 {
+                continue;
+            }
             for ch in 0..3 {
                 let min = bucket.iter().map(|p| p[ch]).min().unwrap_or(0);
                 let max = bucket.iter().map(|p| p[ch]).max().unwrap_or(0);
@@ -610,7 +663,9 @@ fn median_cut(pixels: &[[u8; 3]], num_colors: usize) -> Vec<[u8; 3]> {
             }
         }
 
-        if best_range == 0 { break; }
+        if best_range == 0 {
+            break;
+        }
 
         let bucket = &buckets[best_idx];
         // Find channel with greatest range in this bucket
@@ -657,7 +712,9 @@ pub fn quantize_colors(input: &[u8], num_colors: u32) -> Result<Vec<u8>, JsError
     let mut out_rgba = rgba.clone();
     for pixel in out_rgba.pixels_mut() {
         let Rgba([r, g, b, a]) = *pixel;
-        if a == 0 { continue; }
+        if a == 0 {
+            continue;
+        }
         let src = [r, g, b];
         let mut best = palette[0];
         let mut best_dist = color_dist_sq(src, best);

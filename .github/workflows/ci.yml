@@ -1,0 +1,24 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
+      - run: cargo install wasm-pack
+      - run: make install
+      - run: make build-wasm
+      - run: cd engine && cargo fmt --check
+      - run: cd engine && cargo clippy -- -D warnings
+      - run: cd ui && npx tsc --noEmit
+      - run: cd ui && npx eslint .
+      - run: cd ui && npx prettier --check .
+      - run: cd ui && npx vitest run
+      - run: cd ui && npx vite build

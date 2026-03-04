@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react'
 import {
   MousePointer2,
   Hand,
@@ -9,46 +9,46 @@ import {
   Redo2,
   Frame,
   Download,
-} from "lucide-react";
-import { useEditorStore } from "@/store";
-import { useResponsive } from "@/hooks/use-responsive";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import type { ToolMode } from "@/store/types";
-import { CanvasSizeDialog } from "@/components/dialogs/canvas-size-dialog";
-import { ExportDialog } from "@/components/dialogs/export-dialog";
+} from 'lucide-react'
+import { useEditorStore } from '@/store'
+import { useResponsive } from '@/hooks/use-responsive'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+import type { ToolMode } from '@/store/types'
+import { CanvasSizeDialog } from '@/components/dialogs/canvas-size-dialog'
+import { ExportDialog } from '@/components/dialogs/export-dialog'
 
 const TOOLS: { mode: ToolMode; icon: typeof MousePointer2; label: string; shortcut: string }[] = [
-  { mode: "pointer", icon: MousePointer2, label: "Pointer", shortcut: "V" },
-  { mode: "hand", icon: Hand, label: "Hand", shortcut: "H" },
-  { mode: "zoom", icon: ZoomIn, label: "Zoom", shortcut: "Z" },
-  { mode: "crop", icon: Crop, label: "Crop", shortcut: "C" },
-];
+  { mode: 'pointer', icon: MousePointer2, label: 'Pointer', shortcut: 'V' },
+  { mode: 'hand', icon: Hand, label: 'Hand', shortcut: 'H' },
+  { mode: 'zoom', icon: ZoomIn, label: 'Zoom', shortcut: 'Z' },
+  { mode: 'crop', icon: Crop, label: 'Crop', shortcut: 'C' },
+]
 
 export function Toolbar() {
-  const activeTool = useEditorStore((s) => s.activeTool);
-  const setActiveTool = useEditorStore((s) => s.setActiveTool);
-  const addLayer = useEditorStore((s) => s.addLayer);
-  const undo = useEditorStore((s) => s.undo);
-  const redo = useEditorStore((s) => s.redo);
-  const undoStack = useEditorStore((s) => s.undoStack);
-  const redoStack = useEditorStore((s) => s.redoStack);
-  const { isMobile } = useResponsive();
-  const [canvasSizeOpen, setCanvasSizeOpen] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
+  const activeTool = useEditorStore((s) => s.activeTool)
+  const setActiveTool = useEditorStore((s) => s.setActiveTool)
+  const addLayer = useEditorStore((s) => s.addLayer)
+  const undo = useEditorStore((s) => s.undo)
+  const redo = useEditorStore((s) => s.redo)
+  const undoStack = useEditorStore((s) => s.undoStack)
+  const redoStack = useEditorStore((s) => s.redoStack)
+  const { isMobile } = useResponsive()
+  const [canvasSizeOpen, setCanvasSizeOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
   const handleAddImage = useCallback(() => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/png,image/jpeg,image/webp,image/gif";
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif'
     input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      addLayer(bytes, file.name.replace(/\.[^.]+$/, ""));
-    };
-    input.click();
-  }, [addLayer]);
+      const file = input.files?.[0]
+      if (!file) return
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      addLayer(bytes, file.name.replace(/\.[^.]+$/, ''))
+    }
+    input.click()
+  }, [addLayer])
 
   const buttons = (
     <>
@@ -58,22 +58,24 @@ export function Toolbar() {
             <button
               onClick={() => setActiveTool(mode)}
               className={cn(
-                "flex items-center justify-center rounded-md p-2 transition-colors",
+                'flex items-center justify-center rounded-md p-2 transition-colors',
                 activeTool === mode
-                  ? "bg-blue-500/20 text-blue-400"
-                  : "text-neutral-400 hover:bg-white/10 hover:text-white",
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : 'text-neutral-400 hover:bg-white/10 hover:text-white',
               )}
             >
               <Icon size={18} />
             </button>
           </TooltipTrigger>
-          <TooltipContent side={isMobile ? "top" : "right"}>
+          <TooltipContent side={isMobile ? 'top' : 'right'}>
             {label} ({shortcut})
           </TooltipContent>
         </Tooltip>
       ))}
 
-      <div className={cn(isMobile ? "w-px h-5 bg-white/[.15]" : "mx-1 h-px w-full bg-white/[.15]")} />
+      <div
+        className={cn(isMobile ? 'h-5 w-px bg-white/[.15]' : 'mx-1 h-px w-full bg-white/[.15]')}
+      />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -84,10 +86,12 @@ export function Toolbar() {
             <ImagePlus size={18} />
           </button>
         </TooltipTrigger>
-        <TooltipContent side={isMobile ? "top" : "right"}>Add Image</TooltipContent>
+        <TooltipContent side={isMobile ? 'top' : 'right'}>Add Image</TooltipContent>
       </Tooltip>
 
-      <div className={cn(isMobile ? "w-px h-5 bg-white/[.15]" : "mx-1 h-px w-full bg-white/[.15]")} />
+      <div
+        className={cn(isMobile ? 'h-5 w-px bg-white/[.15]' : 'mx-1 h-px w-full bg-white/[.15]')}
+      />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -99,7 +103,7 @@ export function Toolbar() {
             <Undo2 size={18} />
           </button>
         </TooltipTrigger>
-        <TooltipContent side={isMobile ? "top" : "right"}>Undo (Ctrl+Z)</TooltipContent>
+        <TooltipContent side={isMobile ? 'top' : 'right'}>Undo (Ctrl+Z)</TooltipContent>
       </Tooltip>
 
       <Tooltip>
@@ -112,10 +116,12 @@ export function Toolbar() {
             <Redo2 size={18} />
           </button>
         </TooltipTrigger>
-        <TooltipContent side={isMobile ? "top" : "right"}>Redo (Ctrl+Shift+Z)</TooltipContent>
+        <TooltipContent side={isMobile ? 'top' : 'right'}>Redo (Ctrl+Shift+Z)</TooltipContent>
       </Tooltip>
 
-      <div className={cn(isMobile ? "w-px h-5 bg-white/[.15]" : "mx-1 h-px w-full bg-white/[.15]")} />
+      <div
+        className={cn(isMobile ? 'h-5 w-px bg-white/[.15]' : 'mx-1 h-px w-full bg-white/[.15]')}
+      />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -126,7 +132,7 @@ export function Toolbar() {
             <Frame size={18} />
           </button>
         </TooltipTrigger>
-        <TooltipContent side={isMobile ? "top" : "right"}>Canvas Size</TooltipContent>
+        <TooltipContent side={isMobile ? 'top' : 'right'}>Canvas Size</TooltipContent>
       </Tooltip>
 
       <Tooltip>
@@ -138,17 +144,17 @@ export function Toolbar() {
             <Download size={18} />
           </button>
         </TooltipTrigger>
-        <TooltipContent side={isMobile ? "top" : "right"}>Export</TooltipContent>
+        <TooltipContent side={isMobile ? 'top' : 'right'}>Export</TooltipContent>
       </Tooltip>
     </>
-  );
+  )
 
   const dialogs = (
     <>
       <CanvasSizeDialog open={canvasSizeOpen} onOpenChange={setCanvasSizeOpen} />
       <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
     </>
-  );
+  )
 
   if (isMobile) {
     return (
@@ -158,7 +164,7 @@ export function Toolbar() {
         </div>
         {dialogs}
       </>
-    );
+    )
   }
 
   return (
@@ -168,5 +174,5 @@ export function Toolbar() {
       </div>
       {dialogs}
     </>
-  );
+  )
 }

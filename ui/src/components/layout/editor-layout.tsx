@@ -1,7 +1,7 @@
-import { Toolbar } from "./toolbar";
-import { RightPanel } from "./right-panel";
-import { EditorCanvas } from "@/components/canvas/editor-canvas";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toolbar } from './toolbar'
+import { RightPanel } from './right-panel'
+import { EditorCanvas } from '@/components/canvas/editor-canvas'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 export function EditorLayout() {
   return (
@@ -12,5 +12,5 @@ export function EditorLayout() {
         <RightPanel />
       </div>
     </TooltipProvider>
-  );
+  )
 }

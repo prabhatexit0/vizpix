@@ -1,26 +1,26 @@
-import { useEditorStore } from "@/store";
-import { LayerItem } from "./layer-item";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ImagePlus, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useCallback } from "react";
+import { useEditorStore } from '@/store'
+import { LayerItem } from './layer-item'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { ImagePlus, Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useCallback } from 'react'
 
 export function LayersPanel() {
-  const layers = useEditorStore((s) => s.layers);
-  const addLayer = useEditorStore((s) => s.addLayer);
+  const layers = useEditorStore((s) => s.layers)
+  const addLayer = useEditorStore((s) => s.addLayer)
 
   const handleAddImage = useCallback(() => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/png,image/jpeg,image/webp,image/gif";
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/png,image/jpeg,image/webp,image/gif'
     input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      addLayer(bytes, file.name.replace(/\.[^.]+$/, ""));
-    };
-    input.click();
-  }, [addLayer]);
+      const file = input.files?.[0]
+      if (!file) return
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      addLayer(bytes, file.name.replace(/\.[^.]+$/, ''))
+    }
+    input.click()
+  }, [addLayer])
 
   return (
     <div className="flex h-full min-w-0 flex-col">
@@ -47,5 +47,5 @@ export function LayersPanel() {
         )}
       </ScrollArea>
     </div>
-  );
+  )
 }

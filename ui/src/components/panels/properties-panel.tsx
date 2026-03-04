@@ -1,39 +1,46 @@
-import { useEffect, useState } from "react";
-import { useEditorStore } from "@/store";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { BLEND_MODES } from "@/lib/constants";
-import type { BlendMode } from "@/store/types";
-import { Layers, Loader2 } from "lucide-react";
-import { computeHistogram, type HistogramData } from "@/lib/histogram-utils";
-import { HistogramDisplay } from "./histogram-display";
+import { useEffect, useState } from 'react'
+import { useEditorStore } from '@/store'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
+import { BLEND_MODES } from '@/lib/constants'
+import type { BlendMode } from '@/store/types'
+import { Layers, Loader2 } from 'lucide-react'
+import { computeHistogram, type HistogramData } from '@/lib/histogram-utils'
+import { HistogramDisplay } from './histogram-display'
 
 export function PropertiesPanel() {
-  const activeLayerId = useEditorStore((s) => s.activeLayerId);
-  const layer = useEditorStore((s) =>
-    s.layers.find((l) => l.id === s.activeLayerId),
-  );
-  const setTransform = useEditorStore((s) => s.setTransform);
-  const setOpacity = useEditorStore((s) => s.setOpacity);
-  const setBlendMode = useEditorStore((s) => s.setBlendMode);
-  const renameLayer = useEditorStore((s) => s.renameLayer);
+  const activeLayerId = useEditorStore((s) => s.activeLayerId)
+  const layer = useEditorStore((s) => s.layers.find((l) => l.id === s.activeLayerId))
+  const setTransform = useEditorStore((s) => s.setTransform)
+  const setOpacity = useEditorStore((s) => s.setOpacity)
+  const setBlendMode = useEditorStore((s) => s.setBlendMode)
+  const renameLayer = useEditorStore((s) => s.renameLayer)
 
-  const [histogram, setHistogram] = useState<HistogramData | null>(null);
-  const [histLoading, setHistLoading] = useState(false);
+  const [histogram, setHistogram] = useState<HistogramData | null>(null)
+  const [histBytesRef, setHistBytesRef] = useState<Uint8Array | null>(null)
+  const histLoading = layer?.imageBytes != null && histBytesRef !== layer?.imageBytes
 
   useEffect(() => {
-    if (!layer?.imageBytes) {
-      setHistogram(null);
-      return;
+    if (!layer?.imageBytes) return
+    let cancelled = false
+    const bytes = layer.imageBytes
+    computeHistogram(bytes).then((data) => {
+      if (!cancelled) {
+        setHistogram(data)
+        setHistBytesRef(bytes)
+      }
+    })
+    return () => {
+      cancelled = true
     }
-    let cancelled = false;
-    setHistLoading(true);
-    computeHistogram(layer.imageBytes)
-      .then((data) => { if (!cancelled) setHistogram(data); })
-      .finally(() => { if (!cancelled) setHistLoading(false); });
-    return () => { cancelled = true; };
-  }, [layer?.imageBytes]);
+  }, [layer?.imageBytes])
 
   if (!layer || !activeLayerId) {
     return (
@@ -41,16 +48,16 @@ export function PropertiesPanel() {
         <Layers size={24} strokeWidth={1.5} />
         <span className="text-xs">Select a layer to view properties</span>
       </div>
-    );
+    )
   }
 
-  const { transform } = layer;
+  const { transform } = layer
 
   return (
     <div className="flex flex-col gap-3 p-3">
       {/* Name */}
       <div>
-        <label className="mb-1 block text-xs uppercase tracking-wide text-neutral-500">Name</label>
+        <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">Name</label>
         <Input
           value={layer.name}
           onChange={(e) => renameLayer(activeLayerId, e.target.value)}
@@ -61,7 +68,7 @@ export function PropertiesPanel() {
       {/* Position */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="mb-1 block text-xs uppercase tracking-wide text-neutral-500">X</label>
+          <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">X</label>
           <Input
             type="number"
             value={Math.round(transform.x)}
@@ -70,7 +77,7 @@ export function PropertiesPanel() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs uppercase tracking-wide text-neutral-500">Y</label>
+          <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">Y</label>
           <Input
             type="number"
             value={Math.round(transform.y)}
@@ -83,7 +90,9 @@ export function PropertiesPanel() {
       {/* Scale */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="mb-1 block text-xs uppercase tracking-wide text-neutral-500">Scale X</label>
+          <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
+            Scale X
+          </label>
           <Input
             type="number"
             step={0.01}
@@ -93,7 +102,9 @@ export function PropertiesPanel() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs uppercase tracking-wide text-neutral-500">Scale Y</label>
+          <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
+            Scale Y
+          </label>
           <Input
             type="number"
             step={0.01}
@@ -106,7 +117,9 @@ export function PropertiesPanel() {
 
       {/* Rotation */}
       <div>
-        <label className="mb-1 block text-xs uppercase tracking-wide text-neutral-500">Rotation</label>
+        <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
+          Rotation
+        </label>
         <Input
           type="number"
           value={Math.round(transform.rotation)}
@@ -117,7 +130,7 @@ export function PropertiesPanel() {
 
       {/* Opacity */}
       <div>
-        <label className="mb-1 block text-xs uppercase tracking-wide text-neutral-500">
+        <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
           Opacity — {Math.round(layer.opacity * 100)}%
         </label>
         <Slider
@@ -131,7 +144,9 @@ export function PropertiesPanel() {
 
       {/* Blend Mode */}
       <div>
-        <label className="mb-1 block text-xs uppercase tracking-wide text-neutral-500">Blend Mode</label>
+        <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
+          Blend Mode
+        </label>
         <Select
           value={layer.blendMode}
           onValueChange={(v) => setBlendMode(activeLayerId, v as BlendMode)}
@@ -157,7 +172,7 @@ export function PropertiesPanel() {
       {/* Histogram */}
       <div className="h-px bg-white/[.15]" />
       <div>
-        <label className="mb-1.5 block text-xs uppercase tracking-wide text-neutral-500">
+        <label className="mb-1.5 block text-xs tracking-wide text-neutral-500 uppercase">
           Histogram
         </label>
         {histLoading ? (
@@ -169,5 +184,5 @@ export function PropertiesPanel() {
         ) : null}
       </div>
     </div>
-  );
+  )
 }

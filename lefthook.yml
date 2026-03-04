@@ -1,0 +1,18 @@
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      root: "ui/"
+      glob: "*.{ts,tsx}"
+      run: npx eslint {staged_files}
+    format:
+      root: "ui/"
+      glob: "*.{ts,tsx,css,json}"
+      run: npx prettier --check {staged_files}
+    typecheck:
+      root: "ui/"
+      run: npx tsc --noEmit
+    rust-check:
+      root: "engine/"
+      glob: "*.rs"
+      run: cargo clippy -- -D warnings
