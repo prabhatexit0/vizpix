@@ -69,19 +69,15 @@ export function DrawPreviewOverlay({
       {toolMode === 'draw-ellipse' ? (
         <ellipse
           ref={shapeRef as React.RefObject<SVGEllipseElement>}
-          fill="rgba(59, 130, 246, 0.15)"
-          stroke="#3b82f6"
-          strokeWidth={1.5}
-          strokeDasharray="4 2"
+          fill="#3b82f6"
+          stroke="none"
           display="none"
         />
       ) : (
         <rect
           ref={shapeRef as React.RefObject<SVGRectElement>}
-          fill="rgba(59, 130, 246, 0.15)"
-          stroke="#3b82f6"
-          strokeWidth={1.5}
-          strokeDasharray="4 2"
+          fill="#3b82f6"
+          stroke="none"
           display="none"
         />
       )}
