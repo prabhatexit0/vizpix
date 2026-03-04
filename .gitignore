@@ -1,3 +1,18 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+*.local
+
+# WASM generated output
+ui/src/wasm
+
+# Rust
+engine/target
+engine/Cargo.lock
+
 # Logs
 logs
 *.log
@@ -6,11 +21,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
 
 # Editor directories and files
 .vscode/*
