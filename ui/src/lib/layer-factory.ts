@@ -3,6 +3,10 @@ import { decodeToBitmap } from './canvas-utils'
 
 let layerCounter = 0
 
+export function resetLayerCounter(to = 0) {
+  layerCounter = to
+}
+
 export async function createLayer(
   bytes: Uint8Array,
   name?: string,

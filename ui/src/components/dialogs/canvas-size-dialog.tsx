@@ -28,6 +28,7 @@ interface CanvasSizeDialogProps {
 
 interface CanvasSizePageProps {
   onApply: (w: number, h: number, bg: string) => void
+  onOpenProject?: () => void
 }
 
 const CATEGORIES = ['Social Media', 'Standard', 'Square'] as const
@@ -184,7 +185,7 @@ function CanvasSizeForm({
 }
 
 /** Full-page canvas size picker shown on app launch */
-export function CanvasSizePage({ onApply }: CanvasSizePageProps) {
+export function CanvasSizePage({ onApply, onOpenProject }: CanvasSizePageProps) {
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-neutral-950 text-white">
       <div className="w-full max-w-md px-6">
@@ -193,6 +194,16 @@ export function CanvasSizePage({ onApply }: CanvasSizePageProps) {
           <p className="mt-1 text-sm text-neutral-400">Choose a size to get started</p>
         </div>
         <CanvasSizeForm onApply={onApply} />
+        {onOpenProject && (
+          <div className="mt-4 text-center">
+            <button
+              onClick={onOpenProject}
+              className="text-sm text-neutral-400 underline underline-offset-2 transition-colors hover:text-white"
+            >
+              Open existing project
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
 import type { EditorState, LayersSlice } from '../types'
-import { createLayer } from '@/lib/layer-factory'
+import { createLayer, resetLayerCounter } from '@/lib/layer-factory'
 import { decodeToBitmap } from '@/lib/canvas-utils'
 import { invalidateAlphaCache } from '@/lib/hit-test-cache'
 
@@ -95,6 +95,19 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
     set((s) => ({
       layers: s.layers.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l)),
     }))
+  },
+
+  loadDocument: ({ layers, activeLayerId, documentWidth, documentHeight, documentBackground }) => {
+    resetLayerCounter(layers.length)
+    set({
+      layers,
+      activeLayerId,
+      documentWidth,
+      documentHeight,
+      documentBackground,
+      undoStack: [],
+      redoStack: [],
+    })
   },
 
   applyWasmToLayer: async (id, processedBytes) => {

@@ -59,6 +59,13 @@ export interface LayersSlice {
   duplicateLayer: (id: string) => void
   toggleLock: (id: string) => void
   applyWasmToLayer: (id: string, processedBytes: Uint8Array) => Promise<void>
+  loadDocument: (params: {
+    layers: Layer[]
+    activeLayerId: string | null
+    documentWidth: number
+    documentHeight: number
+    documentBackground: string
+  }) => void
 }
 
 export interface ViewportSlice {
