@@ -330,7 +330,9 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
         } else if (tool === 'draw-ellipse') {
           store.addShapeLayer('ellipse', rect)
         } else if (tool === 'draw-text') {
-          store.addTextLayer(rect.width > 0 ? rect : undefined)
+          // Always pass rect so text spawns at the click position.
+          // When width is 0, addTextLayer will set maxWidth to null (auto-width).
+          store.addTextLayer(rect)
         }
 
         store.setActiveTool('pointer')

@@ -82,6 +82,9 @@ function measureTextLayer(layer: Layer & { type: 'text' }): { width: number; hei
   const canvas = new OffscreenCanvas(1, 1)
   const ctx = canvas.getContext('2d')!
   ctx.font = `${layer.fontStyle} ${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`
+  if ('letterSpacing' in ctx) {
+    ;(ctx as unknown as CanvasRenderingContext2D).letterSpacing = `${layer.letterSpacing}px`
+  }
 
   if (layer.maxWidth !== null) {
     const lines = wrapText(ctx, layer.content, layer.maxWidth)
