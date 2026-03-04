@@ -28,6 +28,21 @@ export const KEYBOARD_SHORTCUTS: Record<string, string> = {
   " ": "temp-hand",
   Delete: "delete-layer",
   Backspace: "delete-layer",
+  "Ctrl+c": "copy-layer",
+  "Ctrl+v": "paste-layer",
+  "Ctrl+x": "cut-layer",
+  "Ctrl+j": "duplicate-layer",
+  "Ctrl+d": "deselect",
+  "Ctrl+z": "undo",
+  "Ctrl+Shift+z": "redo",
+  "Ctrl+=": "zoom-in",
+  "Ctrl+-": "zoom-out",
+  "Ctrl+0": "reset-zoom",
+  "Ctrl+Shift+f": "fit-to-viewport",
+  "[": "layer-down",
+  "]": "layer-up",
+  "Alt+[": "select-prev-layer",
+  "Alt+]": "select-next-layer",
 };
 
 export const ZOOM_MIN = 0.1;

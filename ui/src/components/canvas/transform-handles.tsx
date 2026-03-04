@@ -138,8 +138,18 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
 
         if (drag.handleType === "corner") {
           const [signX, signY] = CORNER_SIGNS[drag.handleIndex];
-          const newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / drag.layerWidth);
-          const newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / drag.layerHeight);
+          let newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / drag.layerWidth);
+          let newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / drag.layerHeight);
+
+          // Shift held: lock aspect ratio by using the dominant axis
+          if (ev.shiftKey) {
+            const ratioX = newScaleX / drag.initialScaleX;
+            const ratioY = newScaleY / drag.initialScaleY;
+            // Pick the axis with the larger change
+            const dominantRatio = Math.abs(ratioX - 1) > Math.abs(ratioY - 1) ? ratioX : ratioY;
+            newScaleX = Math.max(0.01, drag.initialScaleX * dominantRatio);
+            newScaleY = Math.max(0.01, drag.initialScaleY * dominantRatio);
+          }
 
           // Offset position so the opposite corner stays anchored
           const dsx = newScaleX - drag.initialScaleX;

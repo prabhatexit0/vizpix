@@ -1,8 +1,14 @@
 import { useEffect, useRef } from "react";
 import { useEditorStore } from "@/store";
-import type { ToolMode } from "@/store/types";
+import type { Layer, ToolMode } from "@/store/types";
 
-export function useKeyboardShortcuts(setTempHand?: (active: boolean) => void) {
+// Clipboard buffer shared across the hook lifecycle
+let clipboardLayer: Layer | null = null;
+
+export function useKeyboardShortcuts(
+  setTempHand?: (active: boolean) => void,
+  canvasRef?: React.RefObject<HTMLCanvasElement | null>,
+) {
   const prevToolRef = useRef<ToolMode | null>(null);
 
   useEffect(() => {
@@ -15,14 +21,16 @@ export function useKeyboardShortcuts(setTempHand?: (active: boolean) => void) {
 
       // Tool switching
       if (e.key === "v" || e.key === "V") {
-        store.setActiveTool("pointer");
-        return;
+        if (!e.ctrlKey && !e.metaKey) {
+          store.setActiveTool("pointer");
+          return;
+        }
       }
       if (e.key === "h" || e.key === "H") {
         store.setActiveTool("hand");
         return;
       }
-      if (e.key === "z" && !e.ctrlKey && !e.metaKey) {
+      if (e.key === "z" && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
         store.setActiveTool("zoom");
         return;
       }
@@ -36,6 +44,51 @@ export function useKeyboardShortcuts(setTempHand?: (active: boolean) => void) {
         return;
       }
 
+      // ---- Clipboard ----
+
+      // Copy: Ctrl+C / Cmd+C
+      if ((e.ctrlKey || e.metaKey) && (e.key === "c" || e.key === "C") && !e.shiftKey) {
+        e.preventDefault();
+        const layer = store.layers.find((l) => l.id === store.activeLayerId);
+        if (layer) {
+          clipboardLayer = layer;
+        }
+        return;
+      }
+
+      // Paste: Ctrl+V / Cmd+V — preserves all transforms
+      if ((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "V") && !e.shiftKey) {
+        e.preventDefault();
+        if (clipboardLayer) {
+          const src = clipboardLayer;
+          const clone: Layer = {
+            ...src,
+            id: crypto.randomUUID(),
+            name: `${src.name} copy`,
+            transform: { ...src.transform, x: src.transform.x + 20, y: src.transform.y + 20 },
+          };
+          store.pushSnapshot();
+          useEditorStore.setState((s) => ({
+            layers: [...s.layers, clone],
+            activeLayerId: clone.id,
+          }));
+        }
+        return;
+      }
+
+      // Cut: Ctrl+X / Cmd+X
+      if ((e.ctrlKey || e.metaKey) && (e.key === "x" || e.key === "X") && !e.shiftKey) {
+        e.preventDefault();
+        const layer = store.layers.find((l) => l.id === store.activeLayerId);
+        if (layer) {
+          clipboardLayer = layer;
+          store.removeLayer(layer.id);
+        }
+        return;
+      }
+
+      // ---- Undo / Redo ----
+
       // Undo: Ctrl+Z / Cmd+Z
       if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
@@ -44,14 +97,64 @@ export function useKeyboardShortcuts(setTempHand?: (active: boolean) => void) {
       }
 
       // Redo: Ctrl+Shift+Z / Cmd+Shift+Z
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z") && e.shiftKey) {
         e.preventDefault();
         store.redo();
         return;
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === "Z") {
+
+      // ---- Layer management ----
+
+      // Duplicate layer: Ctrl+J / Cmd+J
+      if ((e.ctrlKey || e.metaKey) && (e.key === "j" || e.key === "J")) {
         e.preventDefault();
-        store.redo();
+        if (store.activeLayerId) {
+          store.duplicateLayer(store.activeLayerId);
+        }
+        return;
+      }
+
+      // Move layer up: ]
+      if (e.key === "]" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (store.activeLayerId) {
+          const idx = store.layers.findIndex((l) => l.id === store.activeLayerId);
+          if (idx < store.layers.length - 1) {
+            store.reorderLayers(idx, idx + 1);
+          }
+        }
+        return;
+      }
+
+      // Move layer down: [
+      if (e.key === "[" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (store.activeLayerId) {
+          const idx = store.layers.findIndex((l) => l.id === store.activeLayerId);
+          if (idx > 0) {
+            store.reorderLayers(idx, idx - 1);
+          }
+        }
+        return;
+      }
+
+      // Select next layer: Alt+]
+      if (e.key === "]" && e.altKey) {
+        e.preventDefault();
+        if (store.layers.length > 0) {
+          const idx = store.layers.findIndex((l) => l.id === store.activeLayerId);
+          const next = Math.min(idx + 1, store.layers.length - 1);
+          store.setActiveLayer(store.layers[next].id);
+        }
+        return;
+      }
+
+      // Select previous layer: Alt+[
+      if (e.key === "[" && e.altKey) {
+        e.preventDefault();
+        if (store.layers.length > 0) {
+          const idx = store.layers.findIndex((l) => l.id === store.activeLayerId);
+          const prev = Math.max(idx - 1, 0);
+          store.setActiveLayer(store.layers[prev].id);
+        }
         return;
       }
 
@@ -67,6 +170,40 @@ export function useKeyboardShortcuts(setTempHand?: (active: boolean) => void) {
       if ((e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D")) {
         e.preventDefault();
         store.setActiveLayer(null);
+        return;
+      }
+
+      // ---- Zoom shortcuts ----
+
+      // Zoom in: Ctrl+= / Ctrl++
+      if ((e.ctrlKey || e.metaKey) && (e.key === "=" || e.key === "+") && !e.shiftKey) {
+        e.preventDefault();
+        store.zoom(1.25);
+        return;
+      }
+
+      // Zoom out: Ctrl+-
+      if ((e.ctrlKey || e.metaKey) && (e.key === "-" || e.key === "_")) {
+        e.preventDefault();
+        store.zoom(0.8);
+        return;
+      }
+
+      // Reset zoom: Ctrl+0
+      if ((e.ctrlKey || e.metaKey) && e.key === "0") {
+        e.preventDefault();
+        store.setZoom(1);
+        return;
+      }
+
+      // Fit to viewport: Ctrl+Shift+F
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "f" || e.key === "F")) {
+        e.preventDefault();
+        const canvas = canvasRef?.current;
+        if (canvas) {
+          const rect = canvas.getBoundingClientRect();
+          store.fitToDocument(rect.width, rect.height);
+        }
         return;
       }
     }
@@ -88,5 +225,5 @@ export function useKeyboardShortcuts(setTempHand?: (active: boolean) => void) {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [setTempHand]);
+  }, [setTempHand, canvasRef]);
 }
