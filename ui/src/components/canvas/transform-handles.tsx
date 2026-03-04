@@ -138,8 +138,8 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
 
         if (drag.handleType === "corner") {
           const [signX, signY] = CORNER_SIGNS[drag.handleIndex];
-          const newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / (drag.layerWidth / 2));
-          const newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / (drag.layerHeight / 2));
+          const newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / drag.layerWidth);
+          const newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / drag.layerHeight);
 
           // Offset position so the opposite corner stays anchored
           const dsx = newScaleX - drag.initialScaleX;
@@ -161,12 +161,12 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
           let localOffY = 0;
 
           if (affectsX) {
-            const newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / (drag.layerWidth / 2));
+            const newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / drag.layerWidth);
             updates.scaleX = newScaleX;
             localOffX = (signX * drag.layerWidth * (newScaleX - drag.initialScaleX)) / 2;
           }
           if (affectsY) {
-            const newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / (drag.layerHeight / 2));
+            const newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / drag.layerHeight);
             updates.scaleY = newScaleY;
             localOffY = (signY * drag.layerHeight * (newScaleY - drag.initialScaleY)) / 2;
           }
