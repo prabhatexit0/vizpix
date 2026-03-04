@@ -1,10 +1,13 @@
+import { useEffect, useState } from "react";
 import { useEditorStore } from "@/store";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { BLEND_MODES } from "@/lib/constants";
 import type { BlendMode } from "@/store/types";
-import { Layers } from "lucide-react";
+import { Layers, Loader2 } from "lucide-react";
+import { computeHistogram, type HistogramData } from "@/lib/histogram-utils";
+import { HistogramDisplay } from "./histogram-display";
 
 export function PropertiesPanel() {
   const activeLayerId = useEditorStore((s) => s.activeLayerId);
@@ -15,6 +18,22 @@ export function PropertiesPanel() {
   const setOpacity = useEditorStore((s) => s.setOpacity);
   const setBlendMode = useEditorStore((s) => s.setBlendMode);
   const renameLayer = useEditorStore((s) => s.renameLayer);
+
+  const [histogram, setHistogram] = useState<HistogramData | null>(null);
+  const [histLoading, setHistLoading] = useState(false);
+
+  useEffect(() => {
+    if (!layer?.imageBytes) {
+      setHistogram(null);
+      return;
+    }
+    let cancelled = false;
+    setHistLoading(true);
+    computeHistogram(layer.imageBytes)
+      .then((data) => { if (!cancelled) setHistogram(data); })
+      .finally(() => { if (!cancelled) setHistLoading(false); });
+    return () => { cancelled = true; };
+  }, [layer?.imageBytes]);
 
   if (!layer || !activeLayerId) {
     return (
@@ -133,6 +152,21 @@ export function PropertiesPanel() {
       {/* Dimensions (read-only) */}
       <div className="rounded-md bg-white/5 px-3 py-1.5 text-xs text-neutral-400">
         {layer.width} × {layer.height} px
+      </div>
+
+      {/* Histogram */}
+      <div className="h-px bg-white/[.15]" />
+      <div>
+        <label className="mb-1.5 block text-xs uppercase tracking-wide text-neutral-500">
+          Histogram
+        </label>
+        {histLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 size={16} className="animate-spin text-neutral-500" />
+          </div>
+        ) : histogram ? (
+          <HistogramDisplay data={histogram} />
+        ) : null}
       </div>
     </div>
   );

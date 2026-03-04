@@ -3,6 +3,7 @@ import {
   MousePointer2,
   Hand,
   ZoomIn,
+  Crop,
   ImagePlus,
   Undo2,
   Redo2,
@@ -21,6 +22,7 @@ const TOOLS: { mode: ToolMode; icon: typeof MousePointer2; label: string; shortc
   { mode: "pointer", icon: MousePointer2, label: "Pointer", shortcut: "V" },
   { mode: "hand", icon: Hand, label: "Hand", shortcut: "H" },
   { mode: "zoom", icon: ZoomIn, label: "Zoom", shortcut: "Z" },
+  { mode: "crop", icon: Crop, label: "Crop", shortcut: "C" },
 ];
 
 export function Toolbar() {

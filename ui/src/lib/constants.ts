@@ -4,6 +4,7 @@ export const TOOL_DEFINITIONS: { mode: ToolMode; label: string; shortcut: string
   { mode: "pointer", label: "Pointer", shortcut: "V" },
   { mode: "hand", label: "Hand", shortcut: "H" },
   { mode: "zoom", label: "Zoom", shortcut: "Z" },
+  { mode: "crop", label: "Crop", shortcut: "C" },
 ];
 
 export const BLEND_MODES: { value: BlendMode; label: string }[] = [
@@ -25,6 +26,7 @@ export const KEYBOARD_SHORTCUTS: Record<string, string> = {
   v: "pointer",
   h: "hand",
   z: "zoom",
+  c: "crop",
   " ": "temp-hand",
   Delete: "delete-layer",
   Backspace: "delete-layer",
@@ -50,9 +52,6 @@ export const ZOOM_MAX = 10;
 export const ZOOM_STEP = 0.1;
 export const HISTORY_MAX = 30;
 export const MOBILE_BREAKPOINT = 1024;
-
-export const FILTERS = ["grayscale", "sepia", "warm", "cool", "vintage"] as const;
-export type FilterName = (typeof FILTERS)[number];
 
 export const MIN_CANVAS_SIZE = 1;
 export const MAX_CANVAS_SIZE = 8192;

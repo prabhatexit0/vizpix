@@ -4,6 +4,7 @@ import { useCanvasCompositor } from "@/hooks/use-canvas-compositor";
 import { useCanvasInteractions } from "@/hooks/use-canvas-interactions";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { TransformHandles } from "./transform-handles";
+import { CropOverlay } from "./crop-overlay";
 
 export function EditorCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -87,7 +88,9 @@ export function EditorCanvas() {
       ? "grab"
       : activeTool === "zoom"
         ? "zoom-in"
-        : "default";
+        : activeTool === "crop"
+          ? "crosshair"
+          : "default";
 
   return (
     <div ref={containerRef} data-slot="editor-canvas" className="relative flex-1 overflow-hidden bg-neutral-950">
@@ -101,6 +104,13 @@ export function EditorCanvas() {
       />
       {activeLayerId && activeTool === "pointer" && (
         <TransformHandles
+          canvasRef={canvasRef}
+          layerId={activeLayerId}
+          viewport={viewport}
+        />
+      )}
+      {activeLayerId && activeTool === "crop" && (
+        <CropOverlay
           canvasRef={canvasRef}
           layerId={activeLayerId}
           viewport={viewport}

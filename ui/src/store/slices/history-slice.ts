@@ -1,7 +1,7 @@
 import type { StateCreator } from "zustand";
 import type { EditorState, HistorySlice, LayerSnapshot } from "../types";
 import { HISTORY_MAX } from "@/lib/constants";
-import { decodeToBitmap } from "@/lib/canvas-utils";
+import { decodeToBitmap, batchDecodeToBitmaps } from "@/lib/canvas-utils";
 
 function snapshotLayers(layers: EditorState["layers"]): LayerSnapshot[] {
   return layers.map(({ imageBitmap: _, ...rest }) => ({
@@ -13,13 +13,22 @@ function snapshotLayers(layers: EditorState["layers"]): LayerSnapshot[] {
 async function restoreLayers(
   snapshots: LayerSnapshot[],
 ): Promise<EditorState["layers"]> {
-  return Promise.all(
-    snapshots.map(async (snap) => ({
+  try {
+    const bitmaps = await batchDecodeToBitmaps(snapshots.map((s) => s.imageBytes));
+    return snapshots.map((snap, i) => ({
       ...snap,
       transform: { ...snap.transform },
-      imageBitmap: await decodeToBitmap(snap.imageBytes),
-    })),
-  );
+      imageBitmap: bitmaps[i],
+    }));
+  } catch {
+    return Promise.all(
+      snapshots.map(async (snap) => ({
+        ...snap,
+        transform: { ...snap.transform },
+        imageBitmap: await decodeToBitmap(snap.imageBytes),
+      })),
+    );
+  }
 }
 
 export const createHistorySlice: StateCreator<EditorState, [], [], HistorySlice> = (

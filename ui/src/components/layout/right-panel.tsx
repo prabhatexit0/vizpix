@@ -5,7 +5,6 @@ import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { LayersPanel } from "@/components/panels/layers-panel";
 import { PropertiesPanel } from "@/components/panels/properties-panel";
 import { AdjustPanel } from "@/components/panels/adjust-panel";
-import { FilterPanel } from "@/components/panels/filter-panel";
 import { PanelRight } from "lucide-react";
 import { useState, useCallback, useRef } from "react";
 
@@ -19,7 +18,7 @@ function PanelTabs() {
 
   return (
     <Tabs value={activePanel} onValueChange={setActivePanel} className="flex h-full flex-col min-w-0">
-      <TabsList className="grid w-full grid-cols-4 shrink-0 rounded-none border-b border-white/15 bg-transparent">
+      <TabsList className="grid w-full grid-cols-3 shrink-0 rounded-none border-b border-white/15 bg-transparent">
         <TabsTrigger value="layers" className="text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white">
           Layers
         </TabsTrigger>
@@ -29,15 +28,11 @@ function PanelTabs() {
         <TabsTrigger value="adjust" className="text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white">
           Adjust
         </TabsTrigger>
-        <TabsTrigger value="filter" className="text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white">
-          Filter
-        </TabsTrigger>
       </TabsList>
       <div className="flex-1 overflow-hidden">
         <TabsContent value="layers" className="m-0 h-full"><LayersPanel /></TabsContent>
         <TabsContent value="properties" className="m-0 h-full"><PropertiesPanel /></TabsContent>
         <TabsContent value="adjust" className="m-0 h-full"><AdjustPanel /></TabsContent>
-        <TabsContent value="filter" className="m-0 h-full"><FilterPanel /></TabsContent>
       </div>
     </Tabs>
   );

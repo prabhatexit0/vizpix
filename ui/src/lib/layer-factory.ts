@@ -6,13 +6,24 @@ let layerCounter = 0;
 export async function createLayer(
   bytes: Uint8Array,
   name?: string,
+  maxWidth?: number,
+  maxHeight?: number,
 ): Promise<Layer> {
-  const bitmap = await decodeToBitmap(bytes);
+  let finalBytes = bytes;
+  if (maxWidth && maxHeight) {
+    try {
+      const { resize_to_fit } = await import("@/wasm/vizpix-core/vizpix_core");
+      finalBytes = resize_to_fit(bytes, maxWidth, maxHeight);
+    } catch {
+      // Fall back to original bytes
+    }
+  }
+  const bitmap = await decodeToBitmap(finalBytes);
   layerCounter++;
   return {
     id: crypto.randomUUID(),
     name: name ?? `Layer ${layerCounter}`,
-    imageBytes: bytes,
+    imageBytes: finalBytes,
     imageBitmap: bitmap,
     width: bitmap.width,
     height: bitmap.height,

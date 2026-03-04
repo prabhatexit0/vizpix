@@ -2,6 +2,7 @@ import type { StateCreator } from "zustand";
 import type { EditorState, LayersSlice } from "../types";
 import { createLayer } from "@/lib/layer-factory";
 import { decodeToBitmap } from "@/lib/canvas-utils";
+import { invalidateAlphaCache } from "@/lib/hit-test-cache";
 
 export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> = (
   set,
@@ -11,7 +12,8 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
   activeLayerId: null,
 
   addLayer: async (bytes, name) => {
-    const layer = await createLayer(bytes, name);
+    const { documentWidth, documentHeight } = get();
+    const layer = await createLayer(bytes, name, documentWidth * 2, documentHeight * 2);
     get().pushSnapshot();
     set((s) => ({
       layers: [...s.layers, layer],
@@ -20,6 +22,7 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
   },
 
   removeLayer: (id) => {
+    invalidateAlphaCache(id);
     get().pushSnapshot();
     set((s) => {
       const layers = s.layers.filter((l) => l.id !== id);
