@@ -84,7 +84,7 @@ function CanvasSizeForm({
                     setHeight(preset.height)
                   }}
                   className={cn(
-                    'rounded-md border border-white/[.08] px-2.5 py-1.5 text-left text-xs transition-colors hover:border-blue-500/50 hover:bg-blue-500/10',
+                    'rounded-md border border-white/8 px-2.5 py-1.5 text-left text-xs transition-colors hover:border-blue-500/50 hover:bg-blue-500/10',
                     width === preset.width &&
                       height === preset.height &&
                       'border-blue-500/60 bg-blue-500/15 text-blue-400',
@@ -146,7 +146,7 @@ function CanvasSizeForm({
             type="color"
             value={background}
             onChange={(e) => setBackground(e.target.value)}
-            className="h-8 w-8 cursor-pointer rounded border border-white/[.08] bg-transparent"
+            className="h-8 w-8 cursor-pointer rounded border border-white/8 bg-transparent"
           />
           <Input
             value={background}
@@ -159,7 +159,7 @@ function CanvasSizeForm({
       {/* Preview */}
       <div className="flex items-center justify-center">
         <div
-          className="border border-white/[.15]"
+          className="border border-white/15"
           style={{
             width: previewW,
             height: previewH,

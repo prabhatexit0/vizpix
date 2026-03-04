@@ -73,9 +73,7 @@ export function Toolbar() {
         </Tooltip>
       ))}
 
-      <div
-        className={cn(isMobile ? 'h-5 w-px bg-white/[.15]' : 'mx-1 h-px w-full bg-white/[.15]')}
-      />
+      <div className={cn(isMobile ? 'h-5 w-px bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -89,9 +87,7 @@ export function Toolbar() {
         <TooltipContent side={isMobile ? 'top' : 'right'}>Add Image</TooltipContent>
       </Tooltip>
 
-      <div
-        className={cn(isMobile ? 'h-5 w-px bg-white/[.15]' : 'mx-1 h-px w-full bg-white/[.15]')}
-      />
+      <div className={cn(isMobile ? 'h-5 w-px bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -119,9 +115,7 @@ export function Toolbar() {
         <TooltipContent side={isMobile ? 'top' : 'right'}>Redo (Ctrl+Shift+Z)</TooltipContent>
       </Tooltip>
 
-      <div
-        className={cn(isMobile ? 'h-5 w-px bg-white/[.15]' : 'mx-1 h-px w-full bg-white/[.15]')}
-      />
+      <div className={cn(isMobile ? 'h-5 w-px bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -159,7 +153,7 @@ export function Toolbar() {
   if (isMobile) {
     return (
       <>
-        <div className="absolute bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/[.15] bg-neutral-900/90 px-2 py-1.5 backdrop-blur-md">
+        <div className="absolute bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/15 bg-neutral-900/90 px-2 py-1.5 backdrop-blur-md">
           {buttons}
         </div>
         {dialogs}
@@ -169,7 +163,7 @@ export function Toolbar() {
 
   return (
     <>
-      <div className="flex w-12 flex-col items-center gap-1 border-r border-white/[.15] bg-neutral-900 py-2">
+      <div className="flex w-12 flex-col items-center gap-1 border-r border-white/15 bg-neutral-900 py-2">
         {buttons}
       </div>
       {dialogs}

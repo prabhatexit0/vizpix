@@ -39,7 +39,7 @@ export function LayersPanel() {
         {layers.length === 0 && (
           <button
             onClick={handleAddImage}
-            className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-white/[.12] py-8 text-neutral-500 transition-colors hover:border-white/25 hover:text-neutral-400"
+            className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-white/12 py-8 text-neutral-500 transition-colors hover:border-white/25 hover:text-neutral-400"
           >
             <ImagePlus size={28} strokeWidth={1.5} />
             <span className="text-xs">Add an image to get started</span>

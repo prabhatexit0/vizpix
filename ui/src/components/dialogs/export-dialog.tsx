@@ -60,7 +60,7 @@ function ExportForm({ onClose }: { onClose: () => void }) {
       {/* Format toggle */}
       <div>
         <label className="mb-1.5 block text-xs text-neutral-400">Format</label>
-        <div className="flex gap-1 rounded-lg border border-white/[.08] p-1">
+        <div className="flex gap-1 rounded-lg border border-white/8 p-1">
           {(['png', 'jpeg'] as const).map((f) => (
             <button
               key={f}
@@ -98,7 +98,7 @@ function ExportForm({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Dimensions (read-only) */}
-      <div className="rounded-md border border-white/[.08] px-3 py-2 text-xs text-neutral-400">
+      <div className="rounded-md border border-white/8 px-3 py-2 text-xs text-neutral-400">
         <span className="font-medium text-neutral-300">Dimensions: </span>
         {documentWidth} &times; {documentHeight} px
       </div>

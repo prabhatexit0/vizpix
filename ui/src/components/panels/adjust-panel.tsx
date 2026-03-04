@@ -156,7 +156,7 @@ export function AdjustPanel() {
         {processing ? 'Processing…' : 'Reset'}
       </Button>
 
-      <div className="h-px bg-white/[.15]" />
+      <div className="h-px bg-white/15" />
 
       {/* Blur */}
       <div>
@@ -207,7 +207,7 @@ export function AdjustPanel() {
         Apply Blur
       </Button>
 
-      <div className="h-px bg-white/[.15]" />
+      <div className="h-px bg-white/15" />
 
       {/* Sharpen */}
       <div>
@@ -260,7 +260,7 @@ export function AdjustPanel() {
         Apply Sharpen
       </Button>
 
-      <div className="h-px bg-white/[.15]" />
+      <div className="h-px bg-white/15" />
 
       {/* Posterize */}
       <div>

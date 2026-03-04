@@ -170,7 +170,7 @@ export function PropertiesPanel() {
       </div>
 
       {/* Histogram */}
-      <div className="h-px bg-white/[.15]" />
+      <div className="h-px bg-white/15" />
       <div>
         <label className="mb-1.5 block text-xs tracking-wide text-neutral-500 uppercase">
           Histogram

@@ -26,13 +26,13 @@ export function LayerItem({ layerId }: LayerItemProps) {
         'group flex cursor-pointer flex-col gap-1 rounded-lg border px-2 py-1.5 transition-all duration-150',
         isActive
           ? 'border-blue-500/60 bg-blue-500/10'
-          : 'border-white/[.06] hover:border-white/[.12] hover:bg-white/[.04]',
+          : 'border-white/6 hover:border-white/12 hover:bg-white/4',
       )}
       onClick={() => setActiveLayer(layer.id)}
     >
       <div className="relative flex min-w-0 items-center gap-2">
         {/* Thumbnail */}
-        <div className="h-8 w-8 shrink-0 overflow-hidden rounded border border-white/[.12] bg-neutral-800">
+        <div className="h-8 w-8 shrink-0 overflow-hidden rounded border border-white/12 bg-neutral-800">
           {layer.imageBitmap && (
             <canvas
               className="h-full w-full object-contain"

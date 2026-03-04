@@ -123,7 +123,7 @@ export function RightPanel() {
 
   return (
     <div
-      className="relative flex shrink-0 flex-col border-l border-white/[.15] bg-neutral-900"
+      className="relative flex shrink-0 flex-col border-l border-white/15 bg-neutral-900"
       style={{ width }}
     >
       <ResizeHandle onResize={handleResize} />
