@@ -38,6 +38,8 @@ interface DragState {
   startScreenY: number;
   initialScaleX: number;
   initialScaleY: number;
+  initialX: number;
+  initialY: number;
   layerWidth: number;
   layerHeight: number;
   rotationRad: number;
@@ -79,15 +81,16 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
     }));
   }, [layer, canvasRef, viewport]);
 
+  // Store viewport.zoom in a ref so document-level listeners always see the latest value
+  const zoomRef = useRef(viewport.zoom);
+  zoomRef.current = viewport.zoom;
+
   const onHandlePointerDown = useCallback(
     (e: React.PointerEvent, handleType: "corner" | "mid", handleIndex: number) => {
       e.stopPropagation();
       e.preventDefault();
 
       if (!layer) return;
-
-      const el = e.currentTarget as SVGGElement;
-      el.setPointerCapture(e.pointerId);
 
       dragRef.current = {
         handleType,
@@ -96,67 +99,96 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
         startScreenY: e.clientY,
         initialScaleX: layer.transform.scaleX,
         initialScaleY: layer.transform.scaleY,
+        initialX: layer.transform.x,
+        initialY: layer.transform.y,
         layerWidth: layer.width,
         layerHeight: layer.height,
         rotationRad: (layer.transform.rotation * Math.PI) / 180,
         snapshotPushed: false,
       };
-    },
-    [layer],
-  );
 
-  const onHandlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      const drag = dragRef.current;
-      if (!drag) return;
+      const onDocPointerMove = (ev: PointerEvent) => {
+        const drag = dragRef.current;
+        if (!drag) return;
 
-      if (!drag.snapshotPushed) {
-        useEditorStore.getState().pushSnapshot();
-        drag.snapshotPushed = true;
-      }
-
-      // Screen delta -> world delta (divide by zoom)
-      const sdx = e.clientX - drag.startScreenX;
-      const sdy = e.clientY - drag.startScreenY;
-      const wdx = sdx / viewport.zoom;
-      const wdy = sdy / viewport.zoom;
-
-      // Un-rotate to get local-axis-aligned delta
-      const cos = Math.cos(-drag.rotationRad);
-      const sin = Math.sin(-drag.rotationRad);
-      const localDx = wdx * cos - wdy * sin;
-      const localDy = wdx * sin + wdy * cos;
-
-      const store = useEditorStore.getState();
-
-      if (drag.handleType === "corner") {
-        const [signX, signY] = CORNER_SIGNS[drag.handleIndex];
-        const newScaleX = drag.initialScaleX + (signX * localDx) / (drag.layerWidth / 2);
-        const newScaleY = drag.initialScaleY + (signY * localDy) / (drag.layerHeight / 2);
-        store.setTransform(layerId, {
-          scaleX: Math.max(0.01, newScaleX),
-          scaleY: Math.max(0.01, newScaleY),
-        });
-      } else {
-        const [signX, signY, affectsX, affectsY] = MID_SIGNS[drag.handleIndex];
-        const updates: { scaleX?: number; scaleY?: number } = {};
-        if (affectsX) {
-          updates.scaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / (drag.layerWidth / 2));
+        if (!drag.snapshotPushed) {
+          useEditorStore.getState().pushSnapshot();
+          drag.snapshotPushed = true;
         }
-        if (affectsY) {
-          updates.scaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / (drag.layerHeight / 2));
-        }
-        store.setTransform(layerId, updates);
-      }
-    },
-    [layerId, viewport.zoom],
-  );
 
-  const onHandlePointerUp = useCallback((e: React.PointerEvent) => {
-    const el = e.currentTarget as SVGGElement;
-    el.releasePointerCapture(e.pointerId);
-    dragRef.current = null;
-  }, []);
+        const zoom = zoomRef.current;
+
+        // Screen delta -> world delta (divide by zoom)
+        const sdx = ev.clientX - drag.startScreenX;
+        const sdy = ev.clientY - drag.startScreenY;
+        const wdx = sdx / zoom;
+        const wdy = sdy / zoom;
+
+        // Un-rotate to get local-axis-aligned delta
+        const cos = Math.cos(-drag.rotationRad);
+        const sin = Math.sin(-drag.rotationRad);
+        const localDx = wdx * cos - wdy * sin;
+        const localDy = wdx * sin + wdy * cos;
+
+        const store = useEditorStore.getState();
+
+        // Rotation values for converting local offset back to world coords
+        const rotCos = Math.cos(drag.rotationRad);
+        const rotSin = Math.sin(drag.rotationRad);
+
+        if (drag.handleType === "corner") {
+          const [signX, signY] = CORNER_SIGNS[drag.handleIndex];
+          const newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / drag.layerWidth);
+          const newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / drag.layerHeight);
+
+          // Offset position so the opposite corner stays anchored
+          const dsx = newScaleX - drag.initialScaleX;
+          const dsy = newScaleY - drag.initialScaleY;
+          const localOffX = (signX * drag.layerWidth * dsx) / 2;
+          const localOffY = (signY * drag.layerHeight * dsy) / 2;
+
+          store.setTransform(layerId, {
+            scaleX: newScaleX,
+            scaleY: newScaleY,
+            x: drag.initialX + localOffX * rotCos - localOffY * rotSin,
+            y: drag.initialY + localOffX * rotSin + localOffY * rotCos,
+          });
+        } else {
+          const [signX, signY, affectsX, affectsY] = MID_SIGNS[drag.handleIndex];
+          const updates: { scaleX?: number; scaleY?: number; x?: number; y?: number } = {};
+
+          let localOffX = 0;
+          let localOffY = 0;
+
+          if (affectsX) {
+            const newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / drag.layerWidth);
+            updates.scaleX = newScaleX;
+            localOffX = (signX * drag.layerWidth * (newScaleX - drag.initialScaleX)) / 2;
+          }
+          if (affectsY) {
+            const newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / drag.layerHeight);
+            updates.scaleY = newScaleY;
+            localOffY = (signY * drag.layerHeight * (newScaleY - drag.initialScaleY)) / 2;
+          }
+
+          updates.x = drag.initialX + localOffX * rotCos - localOffY * rotSin;
+          updates.y = drag.initialY + localOffX * rotSin + localOffY * rotCos;
+
+          store.setTransform(layerId, updates);
+        }
+      };
+
+      const onDocPointerUp = () => {
+        dragRef.current = null;
+        document.removeEventListener("pointermove", onDocPointerMove);
+        document.removeEventListener("pointerup", onDocPointerUp);
+      };
+
+      document.addEventListener("pointermove", onDocPointerMove);
+      document.addEventListener("pointerup", onDocPointerUp);
+    },
+    [layer, layerId],
+  );
 
   if (!corners || !layer) return null;
 
@@ -185,8 +217,6 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
           className="pointer-events-auto"
           style={{ cursor: CORNER_CURSORS[i] }}
           onPointerDown={(e) => onHandlePointerDown(e, "corner", i)}
-          onPointerMove={onHandlePointerMove}
-          onPointerUp={onHandlePointerUp}
         >
           <rect
             x={c.x - half}
@@ -216,8 +246,6 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
           className="pointer-events-auto"
           style={{ cursor: MID_CURSORS[i] }}
           onPointerDown={(e) => onHandlePointerDown(e, "mid", i)}
-          onPointerMove={onHandlePointerMove}
-          onPointerUp={onHandlePointerUp}
         >
           <rect
             x={m.x - half}
