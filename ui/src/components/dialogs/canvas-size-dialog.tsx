@@ -70,7 +70,7 @@ function CanvasSizeForm({
   return (
     <div className="flex flex-col gap-4">
       {/* Presets */}
-      <div className="max-h-52 space-y-3 overflow-y-auto pr-1">
+      <div className="scrollbar-none max-h-52 space-y-3 overflow-y-auto pr-1">
         {CATEGORIES.map((cat) => (
           <div key={cat}>
             <p className="mb-1.5 text-xs font-medium tracking-wider text-neutral-400 uppercase">
