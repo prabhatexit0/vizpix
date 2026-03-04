@@ -127,9 +127,7 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
       }
 
       // Re-read layer after potential absorption
-      const currentLayer = isText
-        ? findLayerById(store.layers, layerId)
-        : layer
+      const currentLayer = isText ? findLayerById(store.layers, layerId) : layer
       if (!currentLayer) return
 
       const dragDims = getLayerDimensions(currentLayer)
@@ -232,17 +230,11 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
           let localOffY = 0
 
           if (affectsX) {
-            newScaleX = Math.max(
-              0.01,
-              drag.initialScaleX + (signX * localDx) / drag.layerWidth,
-            )
+            newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / drag.layerWidth)
             localOffX = (signX * drag.layerWidth * (newScaleX - drag.initialScaleX)) / 2
           }
           if (affectsY) {
-            newScaleY = Math.max(
-              0.01,
-              drag.initialScaleY + (signY * localDy) / drag.layerHeight,
-            )
+            newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / drag.layerHeight)
             localOffY = (signY * drag.layerHeight * (newScaleY - drag.initialScaleY)) / 2
           }
 
