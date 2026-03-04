@@ -1,4 +1,5 @@
 use image::{DynamicImage, ImageReader, RgbaImage, Rgba};
+use image::imageops::FilterType;
 use std::io::Cursor;
 use wasm_bindgen::prelude::*;
 
@@ -347,63 +348,191 @@ pub fn adjust_image(input: &[u8], brightness: f32, contrast: f32, saturation: f3
 }
 
 #[wasm_bindgen]
-pub fn apply_filter(input: &[u8], filter_name: &str) -> Result<Vec<u8>, JsError> {
+pub fn resize_to_fit(input: &[u8], max_width: u32, max_height: u32) -> Result<Vec<u8>, JsError> {
     let img = decode_image(input)?;
-    let mut rgba = img.to_rgba8();
+    let (w, h) = (img.width(), img.height());
+    if w <= max_width && h <= max_height {
+        return Ok(input.to_vec());
+    }
+    let scale = (max_width as f64 / w as f64).min(max_height as f64 / h as f64);
+    let nw = ((w as f64 * scale).round() as u32).max(1);
+    let nh = ((h as f64 * scale).round() as u32).max(1);
+    let resized = img.resize(nw, nh, FilterType::Lanczos3);
+    encode_png(&resized)
+}
 
-    match filter_name {
-        "grayscale" => {
-            for pixel in rgba.pixels_mut() {
-                let Rgba([r, g, b, a]) = *pixel;
-                let gray = (0.2126 * r as f32 + 0.7152 * g as f32 + 0.0722 * b as f32) as u8;
-                *pixel = Rgba([gray, gray, gray, a]);
+// --- Blur helpers ---
+
+fn box_blur_pass(src: &[f32], dst: &mut [f32], w: usize, h: usize, radius: usize, channels: usize) {
+    let r = radius as f32;
+    let diam = 2 * radius + 1;
+    let inv = 1.0 / diam as f32;
+
+    // Horizontal pass: src -> dst
+    for y in 0..h {
+        for c in 0..channels {
+            let mut acc = 0.0f32;
+            // seed accumulator with [-radius, radius]
+            for ix in 0..diam {
+                let x = (ix as isize - radius as isize).clamp(0, w as isize - 1) as usize;
+                acc += src[(y * w + x) * channels + c];
+            }
+            dst[(y * w) * channels + c] = acc * inv;
+            for x in 1..w {
+                let add_x = (x as isize + r as isize).min(w as isize - 1) as usize;
+                let rem_x = (x as isize - r as isize - 1).max(0) as usize;
+                acc += src[(y * w + add_x) * channels + c] - src[(y * w + rem_x) * channels + c];
+                dst[(y * w + x) * channels + c] = acc * inv;
             }
         }
-        "sepia" => {
-            for pixel in rgba.pixels_mut() {
-                let Rgba([r, g, b, a]) = *pixel;
-                let (rf, gf, bf) = (r as f32, g as f32, b as f32);
-                let nr = (0.393 * rf + 0.769 * gf + 0.189 * bf).min(255.0) as u8;
-                let ng = (0.349 * rf + 0.686 * gf + 0.168 * bf).min(255.0) as u8;
-                let nb = (0.272 * rf + 0.534 * gf + 0.131 * bf).min(255.0) as u8;
-                *pixel = Rgba([nr, ng, nb, a]);
-            }
-        }
-        "warm" => {
-            for pixel in rgba.pixels_mut() {
-                let Rgba([r, g, b, a]) = *pixel;
-                let nr = (r as u16 + 20).min(255) as u8;
-                let ng = (g as u16 + 10).min(255) as u8;
-                let nb = b.saturating_sub(10);
-                *pixel = Rgba([nr, ng, nb, a]);
-            }
-        }
-        "cool" => {
-            for pixel in rgba.pixels_mut() {
-                let Rgba([r, g, b, a]) = *pixel;
-                let nr = r.saturating_sub(10);
-                let ng = g;
-                let nb = (b as u16 + 20).min(255) as u8;
-                *pixel = Rgba([nr, ng, nb, a]);
-            }
-        }
-        "vintage" => {
-            for pixel in rgba.pixels_mut() {
-                let Rgba([r, g, b, a]) = *pixel;
-                let (rf, gf, bf) = (r as f32, g as f32, b as f32);
-                // Slight sepia + reduced contrast
-                let nr = (0.35 * rf + 0.65 * gf + 0.15 * bf).min(255.0) as u8;
-                let ng = (0.30 * rf + 0.60 * gf + 0.15 * bf).min(255.0) as u8;
-                let nb = (0.25 * rf + 0.45 * gf + 0.15 * bf).min(255.0) as u8;
-                // Fade: lift shadows
-                let nr = (nr as u16 + 20).min(255) as u8;
-                let ng = (ng as u16 + 15).min(255) as u8;
-                let nb = (nb as u16 + 10).min(255) as u8;
-                *pixel = Rgba([nr, ng, nb, a]);
-            }
-        }
-        _ => return Err(JsError::new(&format!("Unknown filter: {filter_name}"))),
     }
 
-    encode_png(&DynamicImage::ImageRgba8(rgba))
+    // Vertical pass: dst -> src (reuse src as output)
+    let tmp = dst.to_vec();
+    for x in 0..w {
+        for c in 0..channels {
+            let mut acc = 0.0f32;
+            for iy in 0..diam {
+                let y = (iy as isize - radius as isize).clamp(0, h as isize - 1) as usize;
+                acc += tmp[(y * w + x) * channels + c];
+            }
+            dst[(0 * w + x) * channels + c] = acc * inv;
+            for y in 1..h {
+                let add_y = (y as isize + r as isize).min(h as isize - 1) as usize;
+                let rem_y = (y as isize - r as isize - 1).max(0) as usize;
+                acc += tmp[(add_y * w + x) * channels + c] - tmp[(rem_y * w + x) * channels + c];
+                dst[(y * w + x) * channels + c] = acc * inv;
+            }
+        }
+    }
+}
+
+fn build_gaussian_kernel(radius: usize) -> Vec<f32> {
+    let sigma = (radius as f32 / 3.0).max(0.3);
+    let size = 2 * radius + 1;
+    let mut kernel = vec![0.0f32; size];
+    let mut sum = 0.0f32;
+    for i in 0..size {
+        let x = i as f32 - radius as f32;
+        let val = (-x * x / (2.0 * sigma * sigma)).exp();
+        kernel[i] = val;
+        sum += val;
+    }
+    for v in kernel.iter_mut() {
+        *v /= sum;
+    }
+    kernel
+}
+
+fn convolve_horizontal(src: &[f32], dst: &mut [f32], w: usize, h: usize, channels: usize, kernel: &[f32]) {
+    let radius = kernel.len() / 2;
+    for y in 0..h {
+        for x in 0..w {
+            for c in 0..channels {
+                let mut acc = 0.0f32;
+                for k in 0..kernel.len() {
+                    let sx = (x as isize + k as isize - radius as isize).clamp(0, w as isize - 1) as usize;
+                    acc += src[(y * w + sx) * channels + c] * kernel[k];
+                }
+                dst[(y * w + x) * channels + c] = acc;
+            }
+        }
+    }
+}
+
+fn convolve_vertical(src: &[f32], dst: &mut [f32], w: usize, h: usize, channels: usize, kernel: &[f32]) {
+    let radius = kernel.len() / 2;
+    for y in 0..h {
+        for x in 0..w {
+            for c in 0..channels {
+                let mut acc = 0.0f32;
+                for k in 0..kernel.len() {
+                    let sy = (y as isize + k as isize - radius as isize).clamp(0, h as isize - 1) as usize;
+                    acc += src[(sy * w + x) * channels + c] * kernel[k];
+                }
+                dst[(y * w + x) * channels + c] = acc;
+            }
+        }
+    }
+}
+
+fn gaussian_blur_f32(pixels: &mut [f32], w: usize, h: usize, channels: usize, radius: usize) {
+    let kernel = build_gaussian_kernel(radius);
+    let len = pixels.len();
+    let mut tmp = vec![0.0f32; len];
+    convolve_horizontal(pixels, &mut tmp, w, h, channels, &kernel);
+    convolve_vertical(&tmp, pixels, w, h, channels, &kernel);
+}
+
+#[wasm_bindgen]
+pub fn apply_blur(input: &[u8], radius: u32, blur_type: &str) -> Result<Vec<u8>, JsError> {
+    if radius == 0 {
+        return Ok(input.to_vec());
+    }
+    let img = decode_image(input)?;
+    let rgba = img.to_rgba8();
+    let (w, h) = (rgba.width() as usize, rgba.height() as usize);
+    let raw = rgba.as_raw();
+
+    let mut pixels: Vec<f32> = raw.iter().map(|&b| b as f32).collect();
+    let r = radius as usize;
+
+    match blur_type {
+        "box" => {
+            let mut tmp = vec![0.0f32; pixels.len()];
+            // Three-pass box blur approximates Gaussian
+            box_blur_pass(&pixels, &mut tmp, w, h, r, 4);
+            pixels.copy_from_slice(&tmp);
+            box_blur_pass(&pixels, &mut tmp, w, h, r, 4);
+            pixels.copy_from_slice(&tmp);
+            box_blur_pass(&pixels, &mut tmp, w, h, r, 4);
+            pixels.copy_from_slice(&tmp);
+        }
+        "gaussian" | _ => {
+            gaussian_blur_f32(&mut pixels, w, h, 4, r);
+        }
+    }
+
+    let out: Vec<u8> = pixels.iter().map(|&v| v.clamp(0.0, 255.0) as u8).collect();
+    let result = RgbaImage::from_raw(w as u32, h as u32, out)
+        .ok_or_else(|| JsError::new("Failed to create blurred image"))?;
+    encode_png(&DynamicImage::ImageRgba8(result))
+}
+
+#[wasm_bindgen]
+pub fn apply_sharpen(input: &[u8], amount: f32, radius: u32, threshold: u32) -> Result<Vec<u8>, JsError> {
+    if amount == 0.0 || radius == 0 {
+        return Ok(input.to_vec());
+    }
+    let img = decode_image(input)?;
+    let rgba = img.to_rgba8();
+    let (w, h) = (rgba.width() as usize, rgba.height() as usize);
+    let raw = rgba.as_raw();
+
+    let original: Vec<f32> = raw.iter().map(|&b| b as f32).collect();
+    let mut blurred = original.clone();
+    gaussian_blur_f32(&mut blurred, w, h, 4, radius as usize);
+
+    let thresh = threshold as f32;
+    let out: Vec<u8> = original
+        .iter()
+        .zip(blurred.iter())
+        .enumerate()
+        .map(|(i, (&orig, &blur))| {
+            // Don't sharpen alpha channel
+            if i % 4 == 3 {
+                return orig.clamp(0.0, 255.0) as u8;
+            }
+            let diff = orig - blur;
+            if diff.abs() < thresh {
+                orig.clamp(0.0, 255.0) as u8
+            } else {
+                (orig + amount * diff).clamp(0.0, 255.0) as u8
+            }
+        })
+        .collect();
+
+    let result = RgbaImage::from_raw(w as u32, h as u32, out)
+        .ok_or_else(|| JsError::new("Failed to create sharpened image"))?;
+    encode_png(&DynamicImage::ImageRgba8(result))
 }

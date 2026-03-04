@@ -11,7 +11,8 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
   activeLayerId: null,
 
   addLayer: async (bytes, name) => {
-    const layer = await createLayer(bytes, name);
+    const { documentWidth, documentHeight } = get();
+    const layer = await createLayer(bytes, name, documentWidth * 2, documentHeight * 2);
     get().pushSnapshot();
     set((s) => ({
       layers: [...s.layers, layer],

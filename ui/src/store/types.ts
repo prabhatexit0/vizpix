@@ -12,7 +12,7 @@ export type BlendMode =
   | "difference"
   | "exclusion";
 
-export type ToolMode = "pointer" | "hand" | "zoom";
+export type ToolMode = "pointer" | "hand" | "zoom" | "crop";
 
 export interface LayerTransform {
   x: number;

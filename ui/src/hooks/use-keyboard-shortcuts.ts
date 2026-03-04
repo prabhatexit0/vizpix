@@ -34,6 +34,20 @@ export function useKeyboardShortcuts(
         store.setActiveTool("zoom");
         return;
       }
+      if (e.key === "c" || e.key === "C") {
+        if (!e.ctrlKey && !e.metaKey) {
+          store.setActiveTool("crop");
+          return;
+        }
+      }
+
+      // Escape: exit crop tool
+      if (e.key === "Escape") {
+        if (store.activeTool === "crop") {
+          store.setActiveTool("pointer");
+          return;
+        }
+      }
 
       // Temp hand (space)
       if (e.key === " " && !e.repeat) {

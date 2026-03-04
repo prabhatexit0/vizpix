@@ -3,6 +3,7 @@ import { useEditorStore } from "@/store";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Loader2, SlidersHorizontal } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AdjustValues {
   brightness: number;
@@ -22,6 +23,11 @@ export function AdjustPanel() {
   const setProcessing = useEditorStore((s) => s.setProcessing);
 
   const [values, setValues] = useState<AdjustValues>(DEFAULTS);
+  const [blurRadius, setBlurRadius] = useState(5);
+  const [blurType, setBlurType] = useState<"box" | "gaussian">("gaussian");
+  const [sharpenAmount, setSharpenAmount] = useState(1.0);
+  const [sharpenRadius, setSharpenRadius] = useState(2);
+  const [sharpenThreshold, setSharpenThreshold] = useState(5);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const baseRef = useRef<Uint8Array | null>(null);
 
@@ -66,6 +72,32 @@ export function AdjustPanel() {
     baseRef.current = null;
   }, []);
 
+  const handleApplyBlur = useCallback(async () => {
+    if (!layer || !activeLayerId || processing) return;
+    setProcessing(true);
+    try {
+      const { apply_blur } = await import("@/wasm/vizpix-core/vizpix_core");
+      const result = apply_blur(layer.imageBytes, blurRadius, blurType);
+      await applyWasmToLayer(activeLayerId, result);
+      baseRef.current = null;
+    } finally {
+      setProcessing(false);
+    }
+  }, [layer, activeLayerId, blurRadius, blurType, processing, applyWasmToLayer, setProcessing]);
+
+  const handleApplySharpen = useCallback(async () => {
+    if (!layer || !activeLayerId || processing) return;
+    setProcessing(true);
+    try {
+      const { apply_sharpen } = await import("@/wasm/vizpix-core/vizpix_core");
+      const result = apply_sharpen(layer.imageBytes, sharpenAmount, sharpenRadius, sharpenThreshold);
+      await applyWasmToLayer(activeLayerId, result);
+      baseRef.current = null;
+    } finally {
+      setProcessing(false);
+    }
+  }, [layer, activeLayerId, sharpenAmount, sharpenRadius, sharpenThreshold, processing, applyWasmToLayer, setProcessing]);
+
   if (!layer) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 p-8 text-neutral-500">
@@ -101,6 +133,110 @@ export function AdjustPanel() {
       >
         {processing ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : null}
         {processing ? "Processing…" : "Reset"}
+      </Button>
+
+      <div className="h-px bg-white/[.15]" />
+
+      {/* Blur */}
+      <div>
+        <div className="mb-1.5 flex items-center justify-between">
+          <label className="text-xs uppercase tracking-wide text-neutral-500">blur radius</label>
+          <span className="tabular-nums text-xs text-neutral-400">{blurRadius}</span>
+        </div>
+        <Slider
+          value={[blurRadius]}
+          min={0}
+          max={50}
+          step={1}
+          onValueChange={([v]) => setBlurRadius(v)}
+        />
+      </div>
+      <div className="flex gap-1">
+        <button
+          onClick={() => setBlurType("box")}
+          className={cn(
+            "flex-1 rounded px-2 py-1 text-xs transition-colors",
+            blurType === "box"
+              ? "bg-blue-500/20 text-blue-400"
+              : "bg-white/5 text-neutral-400 hover:bg-white/10",
+          )}
+        >
+          Box
+        </button>
+        <button
+          onClick={() => setBlurType("gaussian")}
+          className={cn(
+            "flex-1 rounded px-2 py-1 text-xs transition-colors",
+            blurType === "gaussian"
+              ? "bg-blue-500/20 text-blue-400"
+              : "bg-white/5 text-neutral-400 hover:bg-white/10",
+          )}
+        >
+          Gaussian
+        </button>
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleApplyBlur}
+        disabled={processing || blurRadius === 0}
+        className="text-xs"
+      >
+        {processing ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : null}
+        Apply Blur
+      </Button>
+
+      <div className="h-px bg-white/[.15]" />
+
+      {/* Sharpen */}
+      <div>
+        <div className="mb-1.5 flex items-center justify-between">
+          <label className="text-xs uppercase tracking-wide text-neutral-500">sharpen amount</label>
+          <span className="tabular-nums text-xs text-neutral-400">{sharpenAmount.toFixed(1)}</span>
+        </div>
+        <Slider
+          value={[sharpenAmount]}
+          min={0}
+          max={3}
+          step={0.1}
+          onValueChange={([v]) => setSharpenAmount(v)}
+        />
+      </div>
+      <div>
+        <div className="mb-1.5 flex items-center justify-between">
+          <label className="text-xs uppercase tracking-wide text-neutral-500">sharpen radius</label>
+          <span className="tabular-nums text-xs text-neutral-400">{sharpenRadius}</span>
+        </div>
+        <Slider
+          value={[sharpenRadius]}
+          min={1}
+          max={10}
+          step={1}
+          onValueChange={([v]) => setSharpenRadius(v)}
+        />
+      </div>
+      <div>
+        <div className="mb-1.5 flex items-center justify-between">
+          <label className="text-xs uppercase tracking-wide text-neutral-500">threshold</label>
+          <span className="tabular-nums text-xs text-neutral-400">{sharpenThreshold}</span>
+        </div>
+        <Slider
+          value={[sharpenThreshold]}
+          min={0}
+          max={50}
+          step={1}
+          onValueChange={([v]) => setSharpenThreshold(v)}
+        />
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleApplySharpen}
+        disabled={processing || sharpenAmount === 0}
+        className="text-xs"
+      >
+        {processing ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : null}
+        Apply Sharpen
       </Button>
     </div>
   );

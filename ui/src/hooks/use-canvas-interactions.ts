@@ -86,7 +86,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
 
       const tool = getEffectiveTool();
 
-      if (tool === "pointer") {
+      if (tool === "pointer" || tool === "crop") {
         const { wx, wy } = screenToWorld(e.clientX, e.clientY, canvas);
         const hitId = hitTestLayers(wx, wy);
         useEditorStore.getState().setActiveLayer(hitId);
