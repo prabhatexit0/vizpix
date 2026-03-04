@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useRef, useEffect, useState } from 'react'
 import { useEditorStore } from '@/store'
-import type { Viewport } from '@/store/types'
+import type { Viewport, TextLayer } from '@/store/types'
 import { findLayerById, getLayerDimensions } from '@/lib/layer-utils'
 
 interface TransformHandlesProps {
@@ -45,6 +45,9 @@ interface DragState {
   layerHeight: number
   rotationRad: number
   snapshotPushed: boolean
+  isTextLayer: boolean
+  textFontSize: number
+  textMaxWidth: number | null
 }
 
 export function TransformHandles({ canvasRef, layerId, viewport }: TransformHandlesProps) {
@@ -103,20 +106,49 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
 
       if (!layer) return
 
-      const dragDims = getLayerDimensions(layer)
+      const isText = layer.type === 'text'
+      const store = useEditorStore.getState()
+
+      // For text layers, absorb any existing scale into fontSize/maxWidth
+      // so we always start the drag with scaleX=1, scaleY=1
+      if (isText) {
+        const sx = Math.abs(layer.transform.scaleX)
+        const sy = Math.abs(layer.transform.scaleY)
+        if (sx !== 1 || sy !== 1) {
+          const absorbProps: Partial<Pick<TextLayer, 'fontSize' | 'maxWidth'>> = {
+            fontSize: layer.fontSize * sy,
+          }
+          if (layer.maxWidth !== null) {
+            absorbProps.maxWidth = layer.maxWidth * sx
+          }
+          store.updateTextProperties(layerId, absorbProps)
+          store.setTransform(layerId, { scaleX: 1, scaleY: 1 })
+        }
+      }
+
+      // Re-read layer after potential absorption
+      const currentLayer = isText
+        ? findLayerById(store.layers, layerId)
+        : layer
+      if (!currentLayer) return
+
+      const dragDims = getLayerDimensions(currentLayer)
       dragRef.current = {
         handleType,
         handleIndex,
         startScreenX: e.clientX,
         startScreenY: e.clientY,
-        initialScaleX: layer.transform.scaleX,
-        initialScaleY: layer.transform.scaleY,
-        initialX: layer.transform.x,
-        initialY: layer.transform.y,
+        initialScaleX: currentLayer.transform.scaleX,
+        initialScaleY: currentLayer.transform.scaleY,
+        initialX: currentLayer.transform.x,
+        initialY: currentLayer.transform.y,
         layerWidth: dragDims.width,
         layerHeight: dragDims.height,
-        rotationRad: (layer.transform.rotation * Math.PI) / 180,
+        rotationRad: (currentLayer.transform.rotation * Math.PI) / 180,
         snapshotPushed: false,
+        isTextLayer: isText,
+        textFontSize: isText && currentLayer.type === 'text' ? currentLayer.fontSize : 0,
+        textMaxWidth: isText && currentLayer.type === 'text' ? currentLayer.maxWidth : null,
       }
 
       const onDocPointerMove = (ev: PointerEvent) => {
@@ -169,40 +201,73 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
           const localOffX = (signX * drag.layerWidth * dsx) / 2
           const localOffY = (signY * drag.layerHeight * dsy) / 2
 
-          store.setTransform(layerId, {
-            scaleX: newScaleX,
-            scaleY: newScaleY,
-            x: drag.initialX + localOffX * rotCos - localOffY * rotSin,
-            y: drag.initialY + localOffX * rotSin + localOffY * rotCos,
-          })
+          if (drag.isTextLayer) {
+            // For text: convert scale to fontSize/maxWidth, keep scale at 1
+            const newFontSize = Math.max(1, drag.textFontSize * newScaleY)
+            const newWidth = drag.layerWidth * newScaleX
+            store.updateTextProperties(layerId, {
+              fontSize: Math.round(newFontSize * 10) / 10,
+              maxWidth: Math.max(1, newWidth),
+            })
+            store.setTransform(layerId, {
+              scaleX: 1,
+              scaleY: 1,
+              x: drag.initialX + localOffX * rotCos - localOffY * rotSin,
+              y: drag.initialY + localOffX * rotSin + localOffY * rotCos,
+            })
+          } else {
+            store.setTransform(layerId, {
+              scaleX: newScaleX,
+              scaleY: newScaleY,
+              x: drag.initialX + localOffX * rotCos - localOffY * rotSin,
+              y: drag.initialY + localOffX * rotSin + localOffY * rotCos,
+            })
+          }
         } else {
           const [signX, signY, affectsX, affectsY] = MID_SIGNS[drag.handleIndex]
-          const updates: { scaleX?: number; scaleY?: number; x?: number; y?: number } = {}
 
+          let newScaleX = drag.initialScaleX
+          let newScaleY = drag.initialScaleY
           let localOffX = 0
           let localOffY = 0
 
           if (affectsX) {
-            const newScaleX = Math.max(
+            newScaleX = Math.max(
               0.01,
               drag.initialScaleX + (signX * localDx) / drag.layerWidth,
             )
-            updates.scaleX = newScaleX
             localOffX = (signX * drag.layerWidth * (newScaleX - drag.initialScaleX)) / 2
           }
           if (affectsY) {
-            const newScaleY = Math.max(
+            newScaleY = Math.max(
               0.01,
               drag.initialScaleY + (signY * localDy) / drag.layerHeight,
             )
-            updates.scaleY = newScaleY
             localOffY = (signY * drag.layerHeight * (newScaleY - drag.initialScaleY)) / 2
           }
 
-          updates.x = drag.initialX + localOffX * rotCos - localOffY * rotSin
-          updates.y = drag.initialY + localOffX * rotSin + localOffY * rotCos
+          const newX = drag.initialX + localOffX * rotCos - localOffY * rotSin
+          const newY = drag.initialY + localOffX * rotSin + localOffY * rotCos
 
-          store.setTransform(layerId, updates)
+          if (drag.isTextLayer) {
+            // For text: convert scale to fontSize/maxWidth, keep scale at 1
+            const textProps: Partial<Pick<TextLayer, 'fontSize' | 'maxWidth'>> = {}
+            if (affectsX) {
+              textProps.maxWidth = Math.max(1, drag.layerWidth * newScaleX)
+            }
+            if (affectsY) {
+              textProps.fontSize = Math.round(Math.max(1, drag.textFontSize * newScaleY) * 10) / 10
+            }
+            store.updateTextProperties(layerId, textProps)
+            store.setTransform(layerId, { scaleX: 1, scaleY: 1, x: newX, y: newY })
+          } else {
+            const updates: { scaleX?: number; scaleY?: number; x?: number; y?: number } = {}
+            if (affectsX) updates.scaleX = newScaleX
+            if (affectsY) updates.scaleY = newScaleY
+            updates.x = newX
+            updates.y = newY
+            store.setTransform(layerId, updates)
+          }
         }
       }
 

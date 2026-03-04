@@ -320,7 +320,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
         if (rect.width < MIN_DRAW_SIZE && rect.height < MIN_DRAW_SIZE) {
           rect.x = ptrRef.current.startWX
           rect.y = ptrRef.current.startWY
-          rect.width = 200
+          rect.width = tool === 'draw-text' ? 0 : 200
           rect.height = tool === 'draw-text' ? 0 : 200
         }
 
