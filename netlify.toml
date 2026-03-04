@@ -1,5 +1,5 @@
 [build]
-  command = "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo install wasm-pack && make build"
+  command = "curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh && make build"
   publish = "ui/dist"
 
 [build.environment]
