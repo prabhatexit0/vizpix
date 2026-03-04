@@ -38,6 +38,8 @@ interface DragState {
   startScreenY: number;
   initialScaleX: number;
   initialScaleY: number;
+  initialX: number;
+  initialY: number;
   layerWidth: number;
   layerHeight: number;
   rotationRad: number;
@@ -96,6 +98,8 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
         startScreenY: e.clientY,
         initialScaleX: layer.transform.scaleX,
         initialScaleY: layer.transform.scaleY,
+        initialX: layer.transform.x,
+        initialY: layer.transform.y,
         layerWidth: layer.width,
         layerHeight: layer.height,
         rotationRad: (layer.transform.rotation * Math.PI) / 180,
@@ -129,23 +133,48 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
 
       const store = useEditorStore.getState();
 
+      // Rotation values for converting local offset back to world coords
+      const rotCos = Math.cos(drag.rotationRad);
+      const rotSin = Math.sin(drag.rotationRad);
+
       if (drag.handleType === "corner") {
         const [signX, signY] = CORNER_SIGNS[drag.handleIndex];
-        const newScaleX = drag.initialScaleX + (signX * localDx) / (drag.layerWidth / 2);
-        const newScaleY = drag.initialScaleY + (signY * localDy) / (drag.layerHeight / 2);
+        const newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / (drag.layerWidth / 2));
+        const newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / (drag.layerHeight / 2));
+
+        // Offset position so the opposite corner stays anchored
+        const dsx = newScaleX - drag.initialScaleX;
+        const dsy = newScaleY - drag.initialScaleY;
+        const localOffX = (signX * drag.layerWidth * dsx) / 2;
+        const localOffY = (signY * drag.layerHeight * dsy) / 2;
+
         store.setTransform(layerId, {
-          scaleX: Math.max(0.01, newScaleX),
-          scaleY: Math.max(0.01, newScaleY),
+          scaleX: newScaleX,
+          scaleY: newScaleY,
+          x: drag.initialX + localOffX * rotCos - localOffY * rotSin,
+          y: drag.initialY + localOffX * rotSin + localOffY * rotCos,
         });
       } else {
         const [signX, signY, affectsX, affectsY] = MID_SIGNS[drag.handleIndex];
-        const updates: { scaleX?: number; scaleY?: number } = {};
+        const updates: { scaleX?: number; scaleY?: number; x?: number; y?: number } = {};
+
+        let localOffX = 0;
+        let localOffY = 0;
+
         if (affectsX) {
-          updates.scaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / (drag.layerWidth / 2));
+          const newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / (drag.layerWidth / 2));
+          updates.scaleX = newScaleX;
+          localOffX = (signX * drag.layerWidth * (newScaleX - drag.initialScaleX)) / 2;
         }
         if (affectsY) {
-          updates.scaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / (drag.layerHeight / 2));
+          const newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / (drag.layerHeight / 2));
+          updates.scaleY = newScaleY;
+          localOffY = (signY * drag.layerHeight * (newScaleY - drag.initialScaleY)) / 2;
         }
+
+        updates.x = drag.initialX + localOffX * rotCos - localOffY * rotSin;
+        updates.y = drag.initialY + localOffX * rotSin + localOffY * rotCos;
+
         store.setTransform(layerId, updates);
       }
     },
