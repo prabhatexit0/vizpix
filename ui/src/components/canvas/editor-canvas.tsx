@@ -12,7 +12,7 @@ export function EditorCanvas() {
   const { composite } = useCanvasCompositor();
   const { onPointerDown, onPointerMove, onPointerUp, onWheel, setTempHand } =
     useCanvasInteractions(canvasRef);
-  useKeyboardShortcuts(setTempHand);
+  useKeyboardShortcuts(setTempHand, canvasRef);
 
   // Native non-passive wheel listener so preventDefault() actually works.
   // React's onWheel is passive and can't prevent browser zoom.
