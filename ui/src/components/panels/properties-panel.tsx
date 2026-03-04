@@ -21,8 +21,6 @@ export function PropertiesPanel() {
   const setTransform = useEditorStore((s) => s.setTransform)
   const setOpacity = useEditorStore((s) => s.setOpacity)
   const setBlendMode = useEditorStore((s) => s.setBlendMode)
-  const renameLayer = useEditorStore((s) => s.renameLayer)
-
   const [histogram, setHistogram] = useState<HistogramData | null>(null)
   const [histBytesRef, setHistBytesRef] = useState<Uint8Array | null>(null)
   const histLoading = layer?.imageBytes != null && histBytesRef !== layer?.imageBytes
@@ -55,16 +53,6 @@ export function PropertiesPanel() {
 
   return (
     <div className="flex flex-col gap-3 p-3">
-      {/* Name */}
-      <div>
-        <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">Name</label>
-        <Input
-          value={layer.name}
-          onChange={(e) => renameLayer(activeLayerId, e.target.value)}
-          className="h-8 text-xs"
-        />
-      </div>
-
       {/* Position */}
       <div className="grid grid-cols-2 gap-2">
         <div>

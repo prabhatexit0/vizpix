@@ -66,10 +66,14 @@ export function AdjustPanel() {
     [values, applyAdjust],
   )
 
-  const handleReset = useCallback(() => {
+  const handleReset = useCallback(async () => {
+    const base = baseRef.current
+    if (base && activeLayerId) {
+      await applyWasmToLayer(activeLayerId, base)
+    }
     setValues(DEFAULTS)
     baseRef.current = null
-  }, [])
+  }, [activeLayerId, applyWasmToLayer])
 
   const handleApplyBlur = useCallback(async () => {
     if (!layer || !activeLayerId || processing) return

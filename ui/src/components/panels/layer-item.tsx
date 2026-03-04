@@ -1,3 +1,4 @@
+import { useState, useRef, useCallback } from 'react'
 import { Eye, EyeOff, Trash2, Lock, Unlock } from 'lucide-react'
 import { useEditorStore } from '@/store'
 import { cn } from '@/lib/utils'
@@ -15,6 +16,16 @@ export function LayerItem({ layerId }: LayerItemProps) {
   const removeLayer = useEditorStore((s) => s.removeLayer)
   const toggleLock = useEditorStore((s) => s.toggleLock)
   const setOpacity = useEditorStore((s) => s.setOpacity)
+  const renameLayer = useEditorStore((s) => s.renameLayer)
+
+  const [editing, setEditing] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const commitRename = useCallback(() => {
+    const value = inputRef.current?.value.trim()
+    if (value && layer) renameLayer(layer.id, value)
+    setEditing(false)
+  }, [layer, renameLayer])
 
   if (!layer) return null
 
@@ -53,7 +64,30 @@ export function LayerItem({ layerId }: LayerItemProps) {
         </div>
 
         {/* Name */}
-        <span className="flex-1 truncate text-xs text-neutral-200">{layer.name}</span>
+        {editing ? (
+          <input
+            ref={inputRef}
+            defaultValue={layer.name}
+            autoFocus
+            onClick={(e) => e.stopPropagation()}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitRename()
+              if (e.key === 'Escape') setEditing(false)
+            }}
+            className="h-5 flex-1 rounded bg-white/10 px-1 text-xs text-neutral-200 outline-none focus:ring-1 focus:ring-blue-500/50"
+          />
+        ) : (
+          <span
+            className="flex-1 truncate text-xs text-neutral-200 select-none"
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              setEditing(true)
+            }}
+          >
+            {layer.name}
+          </span>
+        )}
 
         {/* Actions — overlays the name on hover so it doesn't affect flow */}
         <div className="absolute right-0 flex items-center gap-0.5 rounded-md bg-neutral-800/90 px-0.5 opacity-0 backdrop-blur-sm transition-opacity duration-150 group-hover:opacity-100">
