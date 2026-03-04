@@ -3,7 +3,7 @@ import { useEditorStore } from "@/store";
 import type { Layer, ToolMode } from "@/store/types";
 
 // Clipboard buffer shared across the hook lifecycle
-let clipboardLayer: Omit<Layer, "imageBitmap"> | null = null;
+let clipboardLayer: Layer | null = null;
 
 export function useKeyboardShortcuts(
   setTempHand?: (active: boolean) => void,
@@ -51,17 +51,27 @@ export function useKeyboardShortcuts(
         e.preventDefault();
         const layer = store.layers.find((l) => l.id === store.activeLayerId);
         if (layer) {
-          const { imageBitmap: _, ...snapshot } = layer;
-          clipboardLayer = snapshot;
+          clipboardLayer = layer;
         }
         return;
       }
 
-      // Paste: Ctrl+V / Cmd+V
+      // Paste: Ctrl+V / Cmd+V — preserves all transforms
       if ((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "V") && !e.shiftKey) {
         e.preventDefault();
         if (clipboardLayer) {
-          store.addLayer(clipboardLayer.imageBytes, clipboardLayer.name + " copy");
+          const src = clipboardLayer;
+          const clone: Layer = {
+            ...src,
+            id: crypto.randomUUID(),
+            name: `${src.name} copy`,
+            transform: { ...src.transform, x: src.transform.x + 20, y: src.transform.y + 20 },
+          };
+          store.pushSnapshot();
+          useEditorStore.setState((s) => ({
+            layers: [...s.layers, clone],
+            activeLayerId: clone.id,
+          }));
         }
         return;
       }
@@ -71,8 +81,7 @@ export function useKeyboardShortcuts(
         e.preventDefault();
         const layer = store.layers.find((l) => l.id === store.activeLayerId);
         if (layer) {
-          const { imageBitmap: _, ...snapshot } = layer;
-          clipboardLayer = snapshot;
+          clipboardLayer = layer;
           store.removeLayer(layer.id);
         }
         return;
