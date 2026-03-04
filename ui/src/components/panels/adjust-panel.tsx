@@ -28,6 +28,7 @@ export function AdjustPanel() {
   const [sharpenAmount, setSharpenAmount] = useState(1.0);
   const [sharpenRadius, setSharpenRadius] = useState(2);
   const [sharpenThreshold, setSharpenThreshold] = useState(5);
+  const [numColors, setNumColors] = useState(8);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const baseRef = useRef<Uint8Array | null>(null);
 
@@ -97,6 +98,19 @@ export function AdjustPanel() {
       setProcessing(false);
     }
   }, [layer, activeLayerId, sharpenAmount, sharpenRadius, sharpenThreshold, processing, applyWasmToLayer, setProcessing]);
+
+  const handleApplyPosterize = useCallback(async () => {
+    if (!layer || !activeLayerId || processing) return;
+    setProcessing(true);
+    try {
+      const { quantize_colors } = await import("@/wasm/vizpix-core/vizpix_core");
+      const result = quantize_colors(layer.imageBytes, numColors);
+      await applyWasmToLayer(activeLayerId, result);
+      baseRef.current = null;
+    } finally {
+      setProcessing(false);
+    }
+  }, [layer, activeLayerId, numColors, processing, applyWasmToLayer, setProcessing]);
 
   if (!layer) {
     return (
@@ -237,6 +251,33 @@ export function AdjustPanel() {
       >
         {processing ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : null}
         Apply Sharpen
+      </Button>
+
+      <div className="h-px bg-white/[.15]" />
+
+      {/* Posterize */}
+      <div>
+        <div className="mb-1.5 flex items-center justify-between">
+          <label className="text-xs uppercase tracking-wide text-neutral-500">posterize colors</label>
+          <span className="tabular-nums text-xs text-neutral-400">{numColors}</span>
+        </div>
+        <Slider
+          value={[numColors]}
+          min={2}
+          max={32}
+          step={1}
+          onValueChange={([v]) => setNumColors(v)}
+        />
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleApplyPosterize}
+        disabled={processing}
+        className="text-xs"
+      >
+        {processing ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : null}
+        Apply Posterize
       </Button>
     </div>
   );

@@ -536,3 +536,143 @@ pub fn apply_sharpen(input: &[u8], amount: f32, radius: u32, threshold: u32) -> 
         .ok_or_else(|| JsError::new("Failed to create sharpened image"))?;
     encode_png(&DynamicImage::ImageRgba8(result))
 }
+
+// --- Histogram ---
+
+#[wasm_bindgen]
+pub fn compute_histogram(input: &[u8]) -> Result<Vec<u8>, JsError> {
+    let img = decode_image(input)?;
+    let rgba = img.to_rgba8();
+
+    let mut r_hist = [0u32; 256];
+    let mut g_hist = [0u32; 256];
+    let mut b_hist = [0u32; 256];
+
+    for pixel in rgba.pixels() {
+        let Rgba([r, g, b, _]) = *pixel;
+        r_hist[r as usize] += 1;
+        g_hist[g as usize] += 1;
+        b_hist[b as usize] += 1;
+    }
+
+    // Pack as little-endian: 3 × 256 × 4 = 3072 bytes
+    let mut out = Vec::with_capacity(3072);
+    for v in &r_hist { out.extend_from_slice(&v.to_le_bytes()); }
+    for v in &g_hist { out.extend_from_slice(&v.to_le_bytes()); }
+    for v in &b_hist { out.extend_from_slice(&v.to_le_bytes()); }
+    Ok(out)
+}
+
+// --- Color Quantization (median-cut) ---
+
+fn color_dist_sq(a: [u8; 3], b: [u8; 3]) -> u32 {
+    let dr = a[0] as i32 - b[0] as i32;
+    let dg = a[1] as i32 - b[1] as i32;
+    let db = a[2] as i32 - b[2] as i32;
+    (dr * dr + dg * dg + db * db) as u32
+}
+
+fn bucket_mean(pixels: &[[u8; 3]]) -> [u8; 3] {
+    if pixels.is_empty() {
+        return [0, 0, 0];
+    }
+    let (mut sr, mut sg, mut sb) = (0u64, 0u64, 0u64);
+    for p in pixels {
+        sr += p[0] as u64;
+        sg += p[1] as u64;
+        sb += p[2] as u64;
+    }
+    let n = pixels.len() as u64;
+    [(sr / n) as u8, (sg / n) as u8, (sb / n) as u8]
+}
+
+fn median_cut(pixels: &[[u8; 3]], num_colors: usize) -> Vec<[u8; 3]> {
+    if pixels.is_empty() || num_colors == 0 {
+        return vec![[0, 0, 0]];
+    }
+
+    let mut buckets: Vec<Vec<[u8; 3]>> = vec![pixels.to_vec()];
+
+    while buckets.len() < num_colors {
+        // Find bucket with greatest range
+        let mut best_idx = 0;
+        let mut best_range = 0u32;
+        for (i, bucket) in buckets.iter().enumerate() {
+            if bucket.len() < 2 { continue; }
+            for ch in 0..3 {
+                let min = bucket.iter().map(|p| p[ch]).min().unwrap_or(0);
+                let max = bucket.iter().map(|p| p[ch]).max().unwrap_or(0);
+                let range = (max - min) as u32;
+                if range > best_range {
+                    best_range = range;
+                    best_idx = i;
+                }
+            }
+        }
+
+        if best_range == 0 { break; }
+
+        let bucket = &buckets[best_idx];
+        // Find channel with greatest range in this bucket
+        let mut split_ch = 0;
+        let mut max_range = 0u8;
+        for ch in 0..3 {
+            let min = bucket.iter().map(|p| p[ch]).min().unwrap_or(0);
+            let max = bucket.iter().map(|p| p[ch]).max().unwrap_or(0);
+            if max - min > max_range {
+                max_range = max - min;
+                split_ch = ch;
+            }
+        }
+
+        let mut to_split = buckets.swap_remove(best_idx);
+        to_split.sort_by_key(|p| p[split_ch]);
+        let mid = to_split.len() / 2;
+        let right = to_split.split_off(mid);
+        buckets.push(to_split);
+        buckets.push(right);
+    }
+
+    buckets.iter().map(|b| bucket_mean(b)).collect()
+}
+
+#[wasm_bindgen]
+pub fn quantize_colors(input: &[u8], num_colors: u32) -> Result<Vec<u8>, JsError> {
+    let img = decode_image(input)?;
+    let rgba = img.to_rgba8();
+    let (w, h) = (rgba.width(), rgba.height());
+
+    // Collect opaque pixel RGB values for palette computation
+    let mut samples: Vec<[u8; 3]> = Vec::new();
+    for pixel in rgba.pixels() {
+        let Rgba([r, g, b, a]) = *pixel;
+        if a > 0 {
+            samples.push([r, g, b]);
+        }
+    }
+
+    let palette = median_cut(&samples, num_colors as usize);
+
+    // Map each pixel to nearest palette color
+    let mut out_rgba = rgba.clone();
+    for pixel in out_rgba.pixels_mut() {
+        let Rgba([r, g, b, a]) = *pixel;
+        if a == 0 { continue; }
+        let src = [r, g, b];
+        let mut best = palette[0];
+        let mut best_dist = color_dist_sq(src, best);
+        for &color in &palette[1..] {
+            let d = color_dist_sq(src, color);
+            if d < best_dist {
+                best_dist = d;
+                best = color;
+            }
+        }
+        *pixel = Rgba([best[0], best[1], best[2], a]);
+    }
+
+    encode_png(&DynamicImage::ImageRgba8(
+        RgbaImage::from_raw(w, h, out_rgba.into_raw())
+            .ok_or_else(|| JsError::new("Failed to create quantized image"))?,
+    ))
+}

@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 import { useEditorStore } from "@/store";
 import type { ToolMode } from "@/store/types";
+import { getAlphaCache } from "@/lib/hit-test-cache";
 
 interface PointerState {
   down: boolean;
@@ -48,6 +49,23 @@ function hitTestLayers(wx: number, wy: number) {
       Math.abs(lx) <= layer.width / 2 &&
       Math.abs(ly) <= layer.height / 2
     ) {
+      // Pixel-perfect alpha check
+      const alphaMap = getAlphaCache(
+        layer.id,
+        layer.imageBytes,
+        layer.imageBitmap,
+        layer.width,
+        layer.height,
+      );
+      if (alphaMap) {
+        const px = Math.floor(lx + layer.width / 2);
+        const py = Math.floor(ly + layer.height / 2);
+        if (px >= 0 && px < alphaMap.width && py >= 0 && py < alphaMap.height) {
+          if (alphaMap.data[py * alphaMap.width + px] <= 10) {
+            continue; // transparent — try next layer down
+          }
+        }
+      }
       return layer.id;
     }
   }
