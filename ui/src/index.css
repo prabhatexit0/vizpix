@@ -122,6 +122,11 @@
     @apply bg-background text-foreground;
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
+    /* Prevent iOS pull-to-refresh and overscroll bouncing */
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
   }
 }
 

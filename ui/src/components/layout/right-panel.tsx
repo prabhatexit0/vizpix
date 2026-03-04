@@ -108,8 +108,8 @@ export function RightPanel() {
     return (
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerTrigger asChild>
-          <button className="absolute top-4 right-4 z-50 rounded-lg border border-white/10 bg-neutral-900/90 p-2 text-neutral-400 backdrop-blur-md hover:text-white">
-            <PanelRight size={18} />
+          <button className="absolute top-4 right-4 z-50 rounded-lg border border-white/10 bg-neutral-900/90 p-2.5 text-neutral-400 backdrop-blur-md hover:text-white">
+            <PanelRight size={20} />
           </button>
         </DrawerTrigger>
         <DrawerContent className="max-h-[70vh]">
