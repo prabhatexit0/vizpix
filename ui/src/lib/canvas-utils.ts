@@ -8,7 +8,7 @@ export async function decodeToBitmapFromRgba(
   width: number,
   height: number,
 ): Promise<ImageBitmap> {
-  const imageData = new ImageData(data, width, height);
+  const imageData = new ImageData(new Uint8ClampedArray(data), width, height);
   return createImageBitmap(imageData);
 }
 

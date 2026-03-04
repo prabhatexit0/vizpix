@@ -46,7 +46,7 @@ function extractPixels(bitmap: ImageBitmap): Uint8Array {
 }
 
 function triggerDownload(bytes: Uint8Array, filename: string, mimeType: string) {
-  const blob = new Blob([bytes], { type: mimeType });
+  const blob = new Blob([bytes as BlobPart], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
