@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { useEditorStore } from '@/store'
-import { blendModeMap } from '@/lib/blend-modes'
 import { createCheckerboardPattern } from '@/components/canvas/checkerboard'
+import { renderLayerToContext } from '@/lib/layer-render'
 
 export function useCanvasCompositor() {
   const patternRef = useRef<CanvasPattern | null>(null)
@@ -45,21 +45,7 @@ export function useCanvasCompositor() {
     ctx.strokeRect(docX, docY, documentWidth, documentHeight)
 
     for (const layer of layers) {
-      if (!layer.visible || !layer.imageBitmap) continue
-
-      ctx.save()
-      ctx.globalAlpha = layer.opacity
-      ctx.globalCompositeOperation = blendModeMap[layer.blendMode]
-
-      const { x, y, scaleX, scaleY, rotation } = layer.transform
-      const cx = x
-      const cy = y
-      ctx.translate(cx, cy)
-      ctx.rotate((rotation * Math.PI) / 180)
-      ctx.scale(scaleX, scaleY)
-      ctx.drawImage(layer.imageBitmap, -layer.width / 2, -layer.height / 2)
-
-      ctx.restore()
+      renderLayerToContext(ctx, layer, documentWidth, documentHeight)
     }
 
     ctx.restore()

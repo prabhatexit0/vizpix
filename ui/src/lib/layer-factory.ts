@@ -1,4 +1,4 @@
-import type { Layer } from '@/store/types'
+import type { ImageLayer } from '@/store/types'
 import { decodeToBitmap } from './canvas-utils'
 
 let layerCounter = 0
@@ -12,7 +12,7 @@ export async function createLayer(
   name?: string,
   maxWidth?: number,
   maxHeight?: number,
-): Promise<Layer> {
+): Promise<ImageLayer> {
   let finalBytes = bytes
   if (maxWidth && maxHeight) {
     try {
@@ -26,6 +26,7 @@ export async function createLayer(
   layerCounter++
   return {
     id: crypto.randomUUID(),
+    type: 'image',
     name: name ?? `Layer ${layerCounter}`,
     imageBytes: finalBytes,
     imageBitmap: bitmap,

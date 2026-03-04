@@ -1,5 +1,5 @@
 import type { BlendMode, Layer } from '@/store/types'
-import { blendModeMap } from '@/lib/blend-modes'
+import { renderLayerToContext, rasterizeLayer } from '@/lib/layer-render'
 
 export type ExportFormat = 'png' | 'jpeg'
 
@@ -60,38 +60,58 @@ async function exportCanvasWasm(options: ExportOptions): Promise<void> {
 
   const [bgR, bgG, bgB] = parseHexColor(background)
 
-  // Collect visible layers with bitmaps
-  const visibleLayers = layers.filter((l) => l.visible && l.imageBitmap)
+  const visibleLayers = layers.filter((l) => l.visible)
 
-  // Extract raw pixels from each layer and build metadata
   const pixelArrays: Uint8Array[] = []
   const meta: number[] = []
   let totalPixelSize = 0
 
   for (const layer of visibleLayers) {
-    const pixels = extractPixels(layer.imageBitmap!)
+    let pixels: Uint8Array
+
+    if (layer.type === 'image' && layer.imageBitmap) {
+      pixels = extractPixels(layer.imageBitmap)
+    } else {
+      const imageData = rasterizeLayer(layer, width, height)
+      pixels = new Uint8Array(imageData.data.buffer)
+    }
+
     const pixelOffset = totalPixelSize
     const pixelLength = pixels.length
     pixelArrays.push(pixels)
     totalPixelSize += pixelLength
 
-    // 11 f64s per layer
-    meta.push(
-      layer.width,
-      layer.height,
-      layer.transform.x,
-      layer.transform.y,
-      layer.transform.scaleX,
-      layer.transform.scaleY,
-      layer.transform.rotation,
-      layer.opacity,
-      blendModeIndex[layer.blendMode],
-      pixelOffset,
-      pixelLength,
-    )
+    if (layer.type === 'image') {
+      meta.push(
+        layer.width,
+        layer.height,
+        layer.transform.x,
+        layer.transform.y,
+        layer.transform.scaleX,
+        layer.transform.scaleY,
+        layer.transform.rotation,
+        layer.opacity,
+        blendModeIndex[layer.blendMode],
+        pixelOffset,
+        pixelLength,
+      )
+    } else {
+      meta.push(
+        width,
+        height,
+        0,
+        0,
+        1,
+        1,
+        0,
+        layer.opacity,
+        blendModeIndex[layer.blendMode],
+        pixelOffset,
+        pixelLength,
+      )
+    }
   }
 
-  // Pack all pixels into one buffer
   const allPixels = new Uint8Array(totalPixelSize)
   let offset = 0
   for (const arr of pixelArrays) {
@@ -122,38 +142,20 @@ async function exportCanvasCanvas2D(options: ExportOptions): Promise<void> {
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Failed to create offscreen canvas context')
 
-  // fill background
   ctx.fillStyle = background
   ctx.fillRect(0, 0, width, height)
-
-  // translate origin to center (matching compositor coordinate system)
   ctx.translate(width / 2, height / 2)
 
-  // composite layers
   for (const layer of layers) {
-    if (!layer.visible || !layer.imageBitmap) continue
-
-    ctx.save()
-    ctx.globalAlpha = layer.opacity
-    ctx.globalCompositeOperation = blendModeMap[layer.blendMode]
-
-    const { x, y, scaleX, scaleY, rotation } = layer.transform
-    ctx.translate(x, y)
-    ctx.rotate((rotation * Math.PI) / 180)
-    ctx.scale(scaleX, scaleY)
-    ctx.drawImage(layer.imageBitmap, -layer.width / 2, -layer.height / 2)
-
-    ctx.restore()
+    renderLayerToContext(ctx, layer, width, height)
   }
 
-  // export to blob
   const mimeType = format === 'png' ? 'image/png' : 'image/jpeg'
   const blob = await canvas.convertToBlob({
     type: mimeType,
     quality: format === 'jpeg' ? quality / 100 : undefined,
   })
 
-  // trigger download
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

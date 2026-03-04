@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useRef, useState, useEffect } from 'react'
 import { useEditorStore } from '@/store'
 import type { Viewport } from '@/store/types'
+import { findLayerById } from '@/lib/layer-utils'
 
 interface CropOverlayProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>
@@ -28,7 +29,10 @@ interface DragState {
 }
 
 export function CropOverlay({ canvasRef, layerId, viewport }: CropOverlayProps) {
-  const layer = useEditorStore((s) => s.layers.find((l) => l.id === layerId))
+  const layer = useEditorStore((s) => {
+    const found = findLayerById(s.layers, layerId)
+    return found?.type === 'image' ? found : undefined
+  })
   const applyWasmToLayer = useEditorStore((s) => s.applyWasmToLayer)
   const setTransform = useEditorStore((s) => s.setTransform)
   const setActiveTool = useEditorStore((s) => s.setActiveTool)

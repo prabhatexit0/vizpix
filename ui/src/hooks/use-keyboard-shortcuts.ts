@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store'
 import type { Layer, ToolMode } from '@/store/types'
+import { findLayerById } from '@/lib/layer-utils'
 
-// Clipboard buffer shared across the hook lifecycle
 let clipboardLayer: Layer | null = null
 
 export function useKeyboardShortcuts(
@@ -13,7 +13,6 @@ export function useKeyboardShortcuts(
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      // ignore if typing in input
       const tag = (e.target as HTMLElement).tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
 
@@ -41,9 +40,50 @@ export function useKeyboardShortcuts(
         }
       }
 
-      // Escape: exit crop tool
+      // Shape shortcuts — switch to draw mode
+      if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) {
+        store.setActiveTool('draw-rectangle')
+        return
+      }
+      if ((e.key === 'e' || e.key === 'E') && !e.ctrlKey && !e.metaKey) {
+        store.setActiveTool('draw-ellipse')
+        return
+      }
+
+      // Text shortcut — switch to draw mode
+      if ((e.key === 't' || e.key === 'T') && !e.ctrlKey && !e.metaKey) {
+        store.setActiveTool('draw-text')
+        return
+      }
+
+      // Group: Ctrl+G
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'g' || e.key === 'G') && !e.shiftKey) {
+        e.preventDefault()
+        if (store.activeLayerId) {
+          store.groupLayers([store.activeLayerId])
+        }
+        return
+      }
+
+      // Ungroup: Ctrl+Shift+G
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'g' || e.key === 'G') && e.shiftKey) {
+        e.preventDefault()
+        if (store.activeLayerId) {
+          const layer = findLayerById(store.layers, store.activeLayerId)
+          if (layer?.type === 'group') {
+            store.ungroupLayer(store.activeLayerId)
+          }
+        }
+        return
+      }
+
+      // Escape: exit crop/draw tool, or stop editing text
       if (e.key === 'Escape') {
-        if (store.activeTool === 'crop') {
+        if (store.editingTextLayerId) {
+          store.setEditingTextLayerId(null)
+          return
+        }
+        if (store.activeTool !== 'pointer' && store.activeTool !== 'hand') {
           store.setActiveTool('pointer')
           return
         }
@@ -60,17 +100,15 @@ export function useKeyboardShortcuts(
 
       // ---- Clipboard ----
 
-      // Copy: Ctrl+C / Cmd+C
       if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && !e.shiftKey) {
         e.preventDefault()
-        const layer = store.layers.find((l) => l.id === store.activeLayerId)
+        const layer = findLayerById(store.layers, store.activeLayerId ?? '')
         if (layer) {
           clipboardLayer = layer
         }
         return
       }
 
-      // Paste: Ctrl+V / Cmd+V — preserves all transforms
       if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && !e.shiftKey) {
         e.preventDefault()
         if (clipboardLayer) {
@@ -80,7 +118,7 @@ export function useKeyboardShortcuts(
             id: crypto.randomUUID(),
             name: `${src.name} copy`,
             transform: { ...src.transform, x: src.transform.x + 20, y: src.transform.y + 20 },
-          }
+          } as Layer
           store.pushSnapshot()
           useEditorStore.setState((s) => ({
             layers: [...s.layers, clone],
@@ -90,10 +128,9 @@ export function useKeyboardShortcuts(
         return
       }
 
-      // Cut: Ctrl+X / Cmd+X
       if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X') && !e.shiftKey) {
         e.preventDefault()
-        const layer = store.layers.find((l) => l.id === store.activeLayerId)
+        const layer = findLayerById(store.layers, store.activeLayerId ?? '')
         if (layer) {
           clipboardLayer = layer
           store.removeLayer(layer.id)
@@ -103,14 +140,12 @@ export function useKeyboardShortcuts(
 
       // ---- Undo / Redo ----
 
-      // Undo: Ctrl+Z / Cmd+Z
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
         store.undo()
         return
       }
 
-      // Redo: Ctrl+Shift+Z / Cmd+Shift+Z
       if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && e.shiftKey) {
         e.preventDefault()
         store.redo()
@@ -119,7 +154,6 @@ export function useKeyboardShortcuts(
 
       // ---- Layer management ----
 
-      // Duplicate layer: Ctrl+J / Cmd+J
       if ((e.ctrlKey || e.metaKey) && (e.key === 'j' || e.key === 'J')) {
         e.preventDefault()
         if (store.activeLayerId) {
@@ -128,7 +162,6 @@ export function useKeyboardShortcuts(
         return
       }
 
-      // Move layer up: ]
       if (e.key === ']' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (store.activeLayerId) {
           const idx = store.layers.findIndex((l) => l.id === store.activeLayerId)
@@ -139,7 +172,6 @@ export function useKeyboardShortcuts(
         return
       }
 
-      // Move layer down: [
       if (e.key === '[' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (store.activeLayerId) {
           const idx = store.layers.findIndex((l) => l.id === store.activeLayerId)
@@ -150,7 +182,6 @@ export function useKeyboardShortcuts(
         return
       }
 
-      // Select next layer: Alt+]
       if (e.key === ']' && e.altKey) {
         e.preventDefault()
         if (store.layers.length > 0) {
@@ -161,7 +192,6 @@ export function useKeyboardShortcuts(
         return
       }
 
-      // Select previous layer: Alt+[
       if (e.key === '[' && e.altKey) {
         e.preventDefault()
         if (store.layers.length > 0) {
@@ -172,7 +202,6 @@ export function useKeyboardShortcuts(
         return
       }
 
-      // Delete layer
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (store.activeLayerId) {
           store.removeLayer(store.activeLayerId)
@@ -180,7 +209,6 @@ export function useKeyboardShortcuts(
         return
       }
 
-      // Deselect: Ctrl+D / Cmd+D
       if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
         e.preventDefault()
         store.setActiveLayer(null)
@@ -189,28 +217,24 @@ export function useKeyboardShortcuts(
 
       // ---- Zoom shortcuts ----
 
-      // Zoom in: Ctrl+= / Ctrl++
       if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+') && !e.shiftKey) {
         e.preventDefault()
         store.zoom(1.25)
         return
       }
 
-      // Zoom out: Ctrl+-
       if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) {
         e.preventDefault()
         store.zoom(0.8)
         return
       }
 
-      // Reset zoom: Ctrl+0
       if ((e.ctrlKey || e.metaKey) && e.key === '0') {
         e.preventDefault()
         store.setZoom(1)
         return
       }
 
-      // Fit to viewport: Ctrl+Shift+F
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
         e.preventDefault()
         const canvas = canvasRef?.current

@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useRef, useEffect, useState } from 'react'
 import { useEditorStore } from '@/store'
 import type { Viewport } from '@/store/types'
+import { findLayerById, getLayerDimensions } from '@/lib/layer-utils'
 
 interface TransformHandlesProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>
@@ -47,7 +48,7 @@ interface DragState {
 }
 
 export function TransformHandles({ canvasRef, layerId, viewport }: TransformHandlesProps) {
-  const layer = useEditorStore((s) => s.layers.find((l) => l.id === layerId))
+  const layer = useEditorStore((s) => findLayerById(s.layers, layerId))
   const dragRef = useRef<DragState | null>(null)
 
   const [canvasRect, setCanvasRect] = useState<{ width: number; height: number } | null>(null)
@@ -65,9 +66,10 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
     const cx = canvasRect.width / 2 + viewport.panX
     const cy = canvasRect.height / 2 + viewport.panY
 
+    const dims = getLayerDimensions(layer)
     const { x, y, scaleX, scaleY, rotation } = layer.transform
-    const hw = (layer.width * scaleX * viewport.zoom) / 2
-    const hh = (layer.height * scaleY * viewport.zoom) / 2
+    const hw = (dims.width * scaleX * viewport.zoom) / 2
+    const hh = (dims.height * scaleY * viewport.zoom) / 2
     const rad = (rotation * Math.PI) / 180
     const cos = Math.cos(rad)
     const sin = Math.sin(rad)
@@ -101,6 +103,7 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
 
       if (!layer) return
 
+      const dragDims = getLayerDimensions(layer)
       dragRef.current = {
         handleType,
         handleIndex,
@@ -110,8 +113,8 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
         initialScaleY: layer.transform.scaleY,
         initialX: layer.transform.x,
         initialY: layer.transform.y,
-        layerWidth: layer.width,
-        layerHeight: layer.height,
+        layerWidth: dragDims.width,
+        layerHeight: dragDims.height,
         rotationRad: (layer.transform.rotation * Math.PI) / 180,
         snapshotPushed: false,
       }

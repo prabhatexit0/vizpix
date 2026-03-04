@@ -5,13 +5,15 @@ import { useCanvasInteractions } from '@/hooks/use-canvas-interactions'
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
 import { TransformHandles } from './transform-handles'
 import { CropOverlay } from './crop-overlay'
+import { DrawPreviewOverlay } from './draw-preview-overlay'
+import { InlineTextEditor } from './inline-text-editor'
 
 export function EditorCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number>(0)
   const { composite } = useCanvasCompositor()
-  const { onPointerDown, onPointerMove, onPointerUp, onWheel, setTempHand } =
+  const { onPointerDown, onPointerMove, onPointerUp, onWheel, setTempHand, getDrawPreview } =
     useCanvasInteractions(canvasRef)
   useKeyboardShortcuts(setTempHand, canvasRef)
 
@@ -47,6 +49,7 @@ export function EditorCanvas() {
   const viewport = useEditorStore((s) => s.viewport)
   const activeLayerId = useEditorStore((s) => s.activeLayerId)
   const activeTool = useEditorStore((s) => s.activeTool)
+  const editingTextLayerId = useEditorStore((s) => s.editingTextLayerId)
 
   const resize = useCallback(() => {
     const canvas = canvasRef.current
@@ -83,12 +86,15 @@ export function EditorCanvas() {
     return () => cancelAnimationFrame(rafRef.current)
   }, [composite])
 
+  const isDrawTool =
+    activeTool === 'draw-rectangle' || activeTool === 'draw-ellipse' || activeTool === 'draw-text'
+
   const cursor =
     activeTool === 'hand'
       ? 'grab'
       : activeTool === 'zoom'
         ? 'zoom-in'
-        : activeTool === 'crop'
+        : activeTool === 'crop' || isDrawTool
           ? 'crosshair'
           : 'default'
 
@@ -111,6 +117,17 @@ export function EditorCanvas() {
       )}
       {activeLayerId && activeTool === 'crop' && (
         <CropOverlay canvasRef={canvasRef} layerId={activeLayerId} viewport={viewport} />
+      )}
+      {isDrawTool && (
+        <DrawPreviewOverlay
+          canvasRef={canvasRef}
+          viewport={viewport}
+          getDrawPreview={getDrawPreview}
+          toolMode={activeTool}
+        />
+      )}
+      {editingTextLayerId && (
+        <InlineTextEditor canvasRef={canvasRef} layerId={editingTextLayerId} viewport={viewport} />
       )}
     </div>
   )

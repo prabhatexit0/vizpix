@@ -3,6 +3,7 @@ import { useEditorStore } from '@/store'
 import { Slider } from '@/components/ui/slider'
 import { Button } from '@/components/ui/button'
 import { SlidersHorizontal } from 'lucide-react'
+import { findLayerById } from '@/lib/layer-utils'
 
 interface AdjustValues {
   brightness: number
@@ -66,7 +67,11 @@ const SECTIONS: { label: string; sliders: SliderDef[] }[] = [
 
 export function AdjustPanel() {
   const activeLayerId = useEditorStore((s) => s.activeLayerId)
-  const layer = useEditorStore((s) => s.layers.find((l) => l.id === s.activeLayerId))
+  const layer = useEditorStore((s) => {
+    if (!s.activeLayerId) return undefined
+    const found = findLayerById(s.layers, s.activeLayerId)
+    return found?.type === 'image' ? found : undefined
+  })
   const applyWasmToLayer = useEditorStore((s) => s.applyWasmToLayer)
   const processing = useEditorStore((s) => s.processing)
   const setProcessing = useEditorStore((s) => s.setProcessing)

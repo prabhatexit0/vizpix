@@ -11,6 +11,9 @@ import {
   Download,
   Save,
   FolderOpen,
+  Square,
+  Circle,
+  Type,
 } from 'lucide-react'
 import { useEditorStore } from '@/store'
 import { useResponsive } from '@/hooks/use-responsive'
@@ -38,7 +41,6 @@ export function Toolbar() {
   const undoStack = useEditorStore((s) => s.undoStack)
   const redoStack = useEditorStore((s) => s.redoStack)
   const layers = useEditorStore((s) => s.layers)
-  const activeLayerId = useEditorStore((s) => s.activeLayerId)
   const documentWidth = useEditorStore((s) => s.documentWidth)
   const documentHeight = useEditorStore((s) => s.documentHeight)
   const documentBackground = useEditorStore((s) => s.documentBackground)
@@ -64,8 +66,8 @@ export function Toolbar() {
   }, [addLayer])
 
   const handleSave = useCallback(() => {
-    saveVpd(layers, documentWidth, documentHeight, documentBackground, activeLayerId)
-  }, [layers, documentWidth, documentHeight, documentBackground, activeLayerId])
+    saveVpd(layers, documentWidth, documentHeight, documentBackground)
+  }, [layers, documentWidth, documentHeight, documentBackground])
 
   const performLoad = useCallback(
     async (file: File) => {
@@ -146,6 +148,57 @@ export function Toolbar() {
           </button>
         </TooltipTrigger>
         <TooltipContent side={isMobile ? 'top' : 'right'}>Add Image</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => setActiveTool('draw-rectangle')}
+            className={cn(
+              'flex items-center justify-center rounded-md p-2 transition-colors',
+              activeTool === 'draw-rectangle'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'text-neutral-400 hover:bg-white/10 hover:text-white',
+            )}
+          >
+            <Square size={18} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side={isMobile ? 'top' : 'right'}>Rectangle (R)</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => setActiveTool('draw-ellipse')}
+            className={cn(
+              'flex items-center justify-center rounded-md p-2 transition-colors',
+              activeTool === 'draw-ellipse'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'text-neutral-400 hover:bg-white/10 hover:text-white',
+            )}
+          >
+            <Circle size={18} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side={isMobile ? 'top' : 'right'}>Ellipse (E)</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            onClick={() => setActiveTool('draw-text')}
+            className={cn(
+              'flex items-center justify-center rounded-md p-2 transition-colors',
+              activeTool === 'draw-text'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'text-neutral-400 hover:bg-white/10 hover:text-white',
+            )}
+          >
+            <Type size={18} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side={isMobile ? 'top' : 'right'}>Text (T)</TooltipContent>
       </Tooltip>
 
       <div className={cn(isMobile ? 'h-5 w-px bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
