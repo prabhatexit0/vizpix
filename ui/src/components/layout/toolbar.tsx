@@ -136,7 +136,9 @@ export function Toolbar() {
         </Tooltip>
       ))}
 
-      <div className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
+      <div
+        className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')}
+      />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -201,7 +203,9 @@ export function Toolbar() {
         <TooltipContent side={isMobile ? 'top' : 'right'}>Text (T)</TooltipContent>
       </Tooltip>
 
-      <div className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
+      <div
+        className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')}
+      />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -227,7 +231,9 @@ export function Toolbar() {
         <TooltipContent side={isMobile ? 'top' : 'right'}>Open Project</TooltipContent>
       </Tooltip>
 
-      <div className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
+      <div
+        className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')}
+      />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -255,7 +261,9 @@ export function Toolbar() {
         <TooltipContent side={isMobile ? 'top' : 'right'}>Redo (Ctrl+Shift+Z)</TooltipContent>
       </Tooltip>
 
-      <div className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
+      <div
+        className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')}
+      />
 
       <Tooltip>
         <TooltipTrigger asChild>
@@ -301,7 +309,13 @@ export function Toolbar() {
   if (isMobile) {
     return (
       <>
-        <div className="absolute bottom-4 left-4 right-4 z-50 flex items-center gap-1 overflow-x-auto rounded-full border border-white/15 bg-neutral-900/90 px-2 py-1.5 backdrop-blur-md scrollbar-none" style={{ paddingBottom: 'calc(0.375rem + env(safe-area-inset-bottom, 0px))', marginBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div
+          className="scrollbar-none absolute right-4 bottom-4 left-4 z-50 flex items-center gap-1 overflow-x-auto rounded-full border border-white/15 bg-neutral-900/90 px-2 py-1.5 backdrop-blur-md"
+          style={{
+            paddingBottom: 'calc(0.375rem + env(safe-area-inset-bottom, 0px))',
+            marginBottom: 'env(safe-area-inset-bottom, 0px)',
+          }}
+        >
           {buttons}
         </div>
         {dialogs}
