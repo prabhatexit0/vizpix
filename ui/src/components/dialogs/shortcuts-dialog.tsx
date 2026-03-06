@@ -1,5 +1,7 @@
 import { useEditorStore } from '@/store'
+import { useResponsive } from '@/hooks/use-responsive'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
 
 const SHORTCUTS = [
   { section: 'Tools' },
@@ -36,9 +38,49 @@ const SHORTCUTS = [
   { key: '?', label: 'Show shortcuts' },
 ] as const
 
+function ShortcutsList() {
+  return (
+    <div className="space-y-1">
+      {SHORTCUTS.map((item, i) =>
+        'section' in item ? (
+          <div
+            key={i}
+            className="pt-3 pb-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase"
+          >
+            {item.section}
+          </div>
+        ) : (
+          <div key={i} className="flex items-center justify-between rounded px-2 py-1.5 text-sm">
+            <span className="text-neutral-300">{item.label}</span>
+            <kbd className="rounded bg-white/10 px-2 py-0.5 font-mono text-xs text-neutral-400">
+              {item.key}
+            </kbd>
+          </div>
+        ),
+      )}
+    </div>
+  )
+}
+
 export function ShortcutsDialog() {
   const showShortcuts = useEditorStore((s) => s.showShortcuts)
   const setShowShortcuts = useEditorStore((s) => s.setShowShortcuts)
+  const { isMobile } = useResponsive()
+
+  if (isMobile) {
+    return (
+      <Drawer open={showShortcuts} onOpenChange={setShowShortcuts}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Keyboard Shortcuts</DrawerTitle>
+          </DrawerHeader>
+          <div className="max-h-[60vh] overflow-y-auto px-4 pb-4">
+            <ShortcutsList />
+          </div>
+        </DrawerContent>
+      </Drawer>
+    )
+  }
 
   return (
     <Dialog open={showShortcuts} onOpenChange={setShowShortcuts}>
@@ -46,28 +88,7 @@ export function ShortcutsDialog() {
         <DialogHeader>
           <DialogTitle>Keyboard Shortcuts</DialogTitle>
         </DialogHeader>
-        <div className="space-y-1">
-          {SHORTCUTS.map((item, i) =>
-            'section' in item ? (
-              <div
-                key={i}
-                className="pt-3 pb-1 text-xs font-semibold tracking-wider text-neutral-400 uppercase"
-              >
-                {item.section}
-              </div>
-            ) : (
-              <div
-                key={i}
-                className="flex items-center justify-between rounded px-2 py-1.5 text-sm"
-              >
-                <span className="text-neutral-300">{item.label}</span>
-                <kbd className="rounded bg-white/10 px-2 py-0.5 font-mono text-xs text-neutral-400">
-                  {item.key}
-                </kbd>
-              </div>
-            ),
-          )}
-        </div>
+        <ShortcutsList />
       </DialogContent>
     </Dialog>
   )
