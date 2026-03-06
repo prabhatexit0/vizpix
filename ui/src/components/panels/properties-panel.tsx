@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useEditorStore } from '@/store'
 import { Input } from '@/components/ui/input'
 import {
@@ -11,11 +11,12 @@ import {
 import { Slider } from '@/components/ui/slider'
 import { Button } from '@/components/ui/button'
 import { BLEND_MODES } from '@/lib/constants'
-import type { BlendMode, Fill, FontWeight } from '@/store/types'
+import type { BlendMode, Fill, FontWeight, TextRun } from '@/store/types'
 import { Layers, Loader2, ImagePlus, RotateCcw, X } from 'lucide-react'
 import { computeHistogram, type HistogramData } from '@/lib/histogram-utils'
 import { HistogramDisplay } from './histogram-display'
 import { findLayerById, getLayerDimensions } from '@/lib/layer-utils'
+import { getFormattingAtSelection, type SelectionFormatting } from '@/lib/rich-text-utils'
 
 const COMMON_FONTS = [
   'Inter',
@@ -36,6 +37,7 @@ const COMMON_FONTS = [
 export function PropertiesPanel() {
   const activeLayerId = useEditorStore((s) => s.activeLayerId)
   const editingTextLayerId = useEditorStore((s) => s.editingTextLayerId)
+  const textSelection = useEditorStore((s) => s.textSelection)
   const layer = useEditorStore((s) => findLayerById(s.layers, s.activeLayerId ?? ''))
   const documentWidth = useEditorStore((s) => s.documentWidth)
   const documentHeight = useEditorStore((s) => s.documentHeight)
@@ -44,10 +46,40 @@ export function PropertiesPanel() {
   const setBlendMode = useEditorStore((s) => s.setBlendMode)
   const updateShapeProperties = useEditorStore((s) => s.updateShapeProperties)
   const updateTextProperties = useEditorStore((s) => s.updateTextProperties)
+  const applyTextFormatting = useEditorStore((s) => s.applyTextFormatting)
   const setLayerMask = useEditorStore((s) => s.setLayerMask)
   const removeLayerMask = useEditorStore((s) => s.removeLayerMask)
   const invertLayerMask = useEditorStore((s) => s.invertLayerMask)
   const pushSnapshot = useEditorStore((s) => s.pushSnapshot)
+
+  const isEditingText = layer?.type === 'text' && editingTextLayerId === activeLayerId
+  const hasRangeSelection =
+    isEditingText && textSelection !== null && textSelection.start !== textSelection.end
+
+  const selectionFormatting = useMemo((): SelectionFormatting | null => {
+    if (!hasRangeSelection || !layer || layer.type !== 'text' || !textSelection) return null
+    return getFormattingAtSelection(layer.runs, textSelection.start, textSelection.end)
+  }, [hasRangeSelection, layer, textSelection])
+
+  const updateTextProp = useCallback(
+    (
+      props: Partial<
+        Pick<
+          TextRun,
+          'fontFamily' | 'fontSize' | 'fontWeight' | 'fontStyle' | 'fill' | 'letterSpacing'
+        >
+      >,
+    ) => {
+      if (!activeLayerId) return
+      if (hasRangeSelection) {
+        pushSnapshot()
+        applyTextFormatting(activeLayerId, props)
+      } else {
+        updateTextProperties(activeLayerId, props as Record<string, unknown>)
+      }
+    },
+    [activeLayerId, hasRangeSelection, pushSnapshot, applyTextFormatting, updateTextProperties],
+  )
 
   const sliderDragRef = useRef(false)
 
@@ -489,12 +521,18 @@ export function PropertiesPanel() {
           <div>
             <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
               Font
+              {selectionFormatting?.mixed && selectionFormatting.fontFamily === undefined
+                ? ' (Mixed)'
+                : ''}
             </label>
             <Select
-              value={COMMON_FONTS.includes(layer.fontFamily) ? layer.fontFamily : '__custom__'}
+              value={(() => {
+                const ff = selectionFormatting?.fontFamily ?? layer.fontFamily
+                return COMMON_FONTS.includes(ff) ? ff : '__custom__'
+              })()}
               onValueChange={(v) => {
                 if (v !== '__custom__') {
-                  updateTextProperties(activeLayerId, { fontFamily: v })
+                  updateTextProp({ fontFamily: v })
                 }
               }}
             >
@@ -510,15 +548,15 @@ export function PropertiesPanel() {
                 <SelectItem value="__custom__">Custom...</SelectItem>
               </SelectContent>
             </Select>
-            {!COMMON_FONTS.includes(layer.fontFamily) && (
+            {!COMMON_FONTS.includes(selectionFormatting?.fontFamily ?? layer.fontFamily) && (
               <Input
                 className="mt-1 h-7 text-xs"
                 placeholder="Custom font name"
-                defaultValue={layer.fontFamily}
+                defaultValue={selectionFormatting?.fontFamily ?? layer.fontFamily}
                 onFocus={onInputFocus}
                 onBlur={(e) => {
                   const v = e.target.value.trim()
-                  if (v) updateTextProperties(activeLayerId, { fontFamily: v })
+                  if (v) updateTextProp({ fontFamily: v })
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
@@ -530,15 +568,16 @@ export function PropertiesPanel() {
           <div>
             <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
               Size
+              {selectionFormatting?.mixed && selectionFormatting.fontSize === undefined
+                ? ' (Mixed)'
+                : ''}
             </label>
             <Input
               type="number"
-              value={layer.fontSize}
+              value={selectionFormatting?.fontSize ?? layer.fontSize}
               min={1}
               onFocus={onInputFocus}
-              onChange={(e) =>
-                updateTextProperties(activeLayerId, { fontSize: Number(e.target.value) })
-              }
+              onChange={(e) => updateTextProp({ fontSize: Number(e.target.value) })}
               className="h-8 text-xs"
             />
           </div>
@@ -547,12 +586,13 @@ export function PropertiesPanel() {
             <div>
               <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
                 Weight
+                {selectionFormatting?.mixed && selectionFormatting.fontWeight === undefined
+                  ? ' (Mixed)'
+                  : ''}
               </label>
               <Select
-                value={String(layer.fontWeight)}
-                onValueChange={(v) =>
-                  updateTextProperties(activeLayerId, { fontWeight: Number(v) as FontWeight })
-                }
+                value={String(selectionFormatting?.fontWeight ?? layer.fontWeight)}
+                onValueChange={(v) => updateTextProp({ fontWeight: Number(v) as FontWeight })}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
@@ -569,12 +609,13 @@ export function PropertiesPanel() {
             <div>
               <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
                 Style
+                {selectionFormatting?.mixed && selectionFormatting.fontStyle === undefined
+                  ? ' (Mixed)'
+                  : ''}
               </label>
               <Select
-                value={layer.fontStyle}
-                onValueChange={(v) =>
-                  updateTextProperties(activeLayerId, { fontStyle: v as 'normal' | 'italic' })
-                }
+                value={selectionFormatting?.fontStyle ?? layer.fontStyle}
+                onValueChange={(v) => updateTextProp({ fontStyle: v as 'normal' | 'italic' })}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
@@ -587,7 +628,7 @@ export function PropertiesPanel() {
             </div>
           </div>
 
-          {/* Text fill type */}
+          {/* Text fill type — only for whole-layer (not selection-aware, as fill type is complex) */}
           <div>
             <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
               Fill Type
@@ -644,35 +685,43 @@ export function PropertiesPanel() {
             </Select>
           </div>
 
-          {/* Text fill color */}
-          {layer.fill.type === 'solid' && (
-            <div>
-              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-                Color
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={layer.fill.color}
-                  onChange={(e) =>
-                    updateTextProperties(activeLayerId, {
-                      fill: { type: 'solid', color: e.target.value },
-                    })
-                  }
-                  className="h-8 w-8 cursor-pointer rounded border border-white/12 bg-transparent"
-                />
-                <Input
-                  value={layer.fill.color}
-                  onChange={(e) =>
-                    updateTextProperties(activeLayerId, {
-                      fill: { type: 'solid', color: e.target.value },
-                    })
-                  }
-                  className="h-8 flex-1 text-xs"
-                />
+          {/* Text fill color — selection-aware for solid colors */}
+          {(() => {
+            const selFill = selectionFormatting?.fill
+            const effectiveFill = hasRangeSelection && selFill ? selFill : layer.fill
+            const isMixedColor =
+              hasRangeSelection && selectionFormatting?.mixed && selFill === undefined
+            if (effectiveFill.type !== 'solid' && !isMixedColor) return null
+            const colorValue = effectiveFill.type === 'solid' ? effectiveFill.color : '#ffffff'
+            return (
+              <div>
+                <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
+                  Color{isMixedColor ? ' (Mixed)' : ''}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={colorValue}
+                    onChange={(e) =>
+                      updateTextProp({
+                        fill: { type: 'solid', color: e.target.value },
+                      })
+                    }
+                    className="h-8 w-8 cursor-pointer rounded border border-white/12 bg-transparent"
+                  />
+                  <Input
+                    value={colorValue}
+                    onChange={(e) =>
+                      updateTextProp({
+                        fill: { type: 'solid', color: e.target.value },
+                      })
+                    }
+                    className="h-8 flex-1 text-xs"
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           <div>
             <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
