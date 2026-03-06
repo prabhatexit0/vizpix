@@ -21,13 +21,15 @@ function App() {
       setDocumentSize(w, h)
       setDocumentBackground(bg)
       setShowEditor(true)
-      // Fit document to viewport after editor mounts
+      // Fit document to viewport after editor mounts — double rAF ensures layout is settled
       requestAnimationFrame(() => {
-        const container = document.querySelector("[data-slot='editor-canvas']")
-        if (container) {
-          const rect = container.getBoundingClientRect()
-          fitToDocument(rect.width, rect.height)
-        }
+        requestAnimationFrame(() => {
+          const container = document.querySelector("[data-slot='editor-canvas']")
+          if (container) {
+            const rect = container.getBoundingClientRect()
+            fitToDocument(rect.width, rect.height)
+          }
+        })
       })
     },
     [setDocumentSize, setDocumentBackground, fitToDocument],
