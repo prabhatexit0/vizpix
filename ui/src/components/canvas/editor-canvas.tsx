@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 import { useEditorStore } from '@/store'
 import { useCanvasCompositor } from '@/hooks/use-canvas-compositor'
 import { useCanvasInteractions } from '@/hooks/use-canvas-interactions'
@@ -59,6 +59,12 @@ export function EditorCanvas() {
   const activeLayerId = useEditorStore((s) => s.activeLayerId)
   const activeTool = useEditorStore((s) => s.activeTool)
   const editingTextLayerId = useEditorStore((s) => s.editingTextLayerId)
+
+  // Force re-render when fonts finish loading so text layers use the correct font
+  const [, setFontsLoaded] = useState(false)
+  useEffect(() => {
+    document.fonts.ready.then(() => setFontsLoaded(true))
+  }, [])
 
   const resize = useCallback(() => {
     const canvas = canvasRef.current
