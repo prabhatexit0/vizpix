@@ -1,14 +1,6 @@
-import type {
-  Layer,
-  ImageLayer,
-  ShapeLayer,
-  TextLayer,
-  GroupLayer,
-  Fill,
-  TextRun,
-} from '@/store/types'
+import type { Layer, ImageLayer, ShapeLayer, TextLayer, GroupLayer, Fill } from '@/store/types'
 import { blendModeMap } from './blend-modes'
-import { wrapText } from './layer-utils'
+import { layoutTextRuns, type TextLine } from './rich-text-utils'
 
 export function renderLayerToContext(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -180,67 +172,10 @@ function renderShapeLayer(
   }
 }
 
-function resolveRunFont(run: TextRun, layer: TextLayer): string {
-  return `${run.fontStyle ?? layer.fontStyle} ${run.fontWeight ?? layer.fontWeight} ${run.fontSize ?? layer.fontSize}px ${run.fontFamily ?? layer.fontFamily}`
-}
-
-function splitRunsToLines(runs: TextRun[]): Array<Array<{ text: string; run: TextRun }>> {
-  const lines: Array<Array<{ text: string; run: TextRun }>> = [[]]
-  for (const run of runs) {
-    if (!run.text) continue
-    const parts = run.text.split('\n')
-    for (let i = 0; i < parts.length; i++) {
-      if (i > 0) lines.push([])
-      if (parts[i]) {
-        lines[lines.length - 1].push({ text: parts[i], run })
-      }
-    }
-  }
-  return lines
-}
-
-interface MeasuredSegment {
-  text: string
-  run: TextRun
-  font: string
-  fontSize: number
-  letterSpacing: number
-  width: number
-}
-
-interface MeasuredLine {
-  segments: MeasuredSegment[]
-  width: number
-  lineHeight: number
-}
-
-function measureRunLines(
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-  layer: TextLayer,
-): MeasuredLine[] {
-  const rawLines = splitRunsToLines(layer.runs)
-  return rawLines.map((segments) => {
-    let lineWidth = 0
-    let maxFontSize = layer.fontSize
-    const measured = segments.map((seg) => {
-      const font = resolveRunFont(seg.run, layer)
-      const fs = seg.run.fontSize ?? layer.fontSize
-      const ls = seg.run.letterSpacing ?? layer.letterSpacing
-      ctx.font = font
-      if ('letterSpacing' in ctx) {
-        ;(ctx as CanvasRenderingContext2D).letterSpacing = `${ls}px`
-      }
-      const width = ctx.measureText(seg.text).width
-      maxFontSize = Math.max(maxFontSize, fs)
-      lineWidth += width
-      return { ...seg, font, fontSize: fs, letterSpacing: ls, width }
-    })
-    return {
-      segments: measured,
-      width: lineWidth,
-      lineHeight: (segments.length > 0 ? maxFontSize : layer.fontSize) * layer.lineHeight,
-    }
-  })
+function getLayoutTotalHeight(layout: TextLine[]): number {
+  if (layout.length === 0) return 0
+  const last = layout[layout.length - 1]
+  return last.yOffset + last.lineHeight
 }
 
 function renderTextLayer(
@@ -248,8 +183,8 @@ function renderTextLayer(
   layer: TextLayer,
   isExport = false,
 ): void {
-  const { runs, fontSize, fill, textAlign, lineHeight, boxWidth } = layer
-  const content = runs.map((r) => r.text).join('')
+  const { fontSize, fill, textAlign, lineHeight } = layer
+  const content = layer.runs.map((r) => r.text).join('')
 
   if (!content && !isExport) {
     const minW = 100
@@ -267,19 +202,12 @@ function renderTextLayer(
 
   if (!content) return
 
-  // For boxWidth text, use flat rendering (run-aware wrapping comes in US-403)
-  if (boxWidth !== null) {
-    renderTextLayerFlat(ctx, layer, content)
-    return
-  }
-
-  // Per-run rendering for non-boxWidth text
-  ctx.textBaseline = 'top'
-  const measuredLines = measureRunLines(ctx, layer)
-  const totalHeight = measuredLines.reduce((sum, l) => sum + l.lineHeight, 0)
-  const textBlockWidth = Math.max(0, ...measuredLines.map((l) => l.width))
+  const layout = layoutTextRuns(layer)
+  const totalHeight = getLayoutTotalHeight(layout)
+  const textBlockWidth = layer.boxWidth ?? Math.max(0, ...layout.map((l) => l.width))
   const yStart = -totalHeight / 2
 
+  ctx.textBaseline = 'top'
   const useGradient = fill.type !== 'none' && fill.type !== 'solid'
 
   if (useGradient) {
@@ -292,8 +220,7 @@ function renderTextLayer(
     tctx.textAlign = 'left'
     tctx.fillStyle = 'white'
 
-    let y = 2
-    for (const line of measuredLines) {
+    for (const line of layout) {
       const x0 =
         textAlign === 'left'
           ? 2
@@ -306,10 +233,9 @@ function renderTextLayer(
         if ('letterSpacing' in tctx) {
           ;(tctx as unknown as CanvasRenderingContext2D).letterSpacing = `${seg.letterSpacing}px`
         }
-        tctx.fillText(seg.text, x, y)
+        tctx.fillText(seg.text, x, 2 + line.yOffset)
         x += seg.width
       }
-      y += line.lineHeight
     }
 
     tctx.globalCompositeOperation = 'source-in'
@@ -319,8 +245,7 @@ function renderTextLayer(
   } else {
     ctx.textAlign = 'left'
 
-    let y = yStart
-    for (const line of measuredLines) {
+    for (const line of layout) {
       const x0 =
         textAlign === 'left'
           ? -textBlockWidth / 2
@@ -342,93 +267,9 @@ function renderTextLayer(
         } else {
           ctx.fillStyle = '#ffffff'
         }
-        ctx.fillText(seg.text, x, y)
+        ctx.fillText(seg.text, x, yStart + line.yOffset)
         x += seg.width
       }
-      y += line.lineHeight
-    }
-  }
-}
-
-function renderTextLayerFlat(
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-  layer: TextLayer,
-  content: string,
-): void {
-  const {
-    fontFamily,
-    fontSize,
-    fontWeight,
-    fontStyle,
-    fill,
-    textAlign,
-    lineHeight,
-    letterSpacing,
-    boxWidth,
-  } = layer
-
-  ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`
-  ctx.textAlign = textAlign
-  ctx.textBaseline = 'top'
-  if ('letterSpacing' in ctx) {
-    ;(ctx as CanvasRenderingContext2D).letterSpacing = `${letterSpacing}px`
-  }
-
-  let lines: string[]
-  if (boxWidth !== null) {
-    lines = wrapText(ctx as CanvasRenderingContext2D, content, boxWidth)
-  } else {
-    lines = content.split('\n')
-  }
-
-  const lineH = fontSize * lineHeight
-  const totalHeight = lines.length * lineH
-
-  let textBlockWidth: number
-  if (boxWidth !== null) {
-    textBlockWidth = boxWidth
-  } else {
-    textBlockWidth = Math.max(...lines.map((l) => ctx.measureText(l).width))
-  }
-
-  let xOffset: number
-  if (textAlign === 'left') xOffset = -textBlockWidth / 2
-  else if (textAlign === 'right') xOffset = textBlockWidth / 2
-  else xOffset = 0
-
-  const yStart = -totalHeight / 2
-
-  if (fill.type !== 'none' && fill.type !== 'solid') {
-    const tw = Math.ceil(textBlockWidth) + 4
-    const th = Math.ceil(totalHeight) + 4
-    const temp = new OffscreenCanvas(tw, th)
-    const tctx = temp.getContext('2d')!
-    tctx.font = ctx.font
-    tctx.textAlign = textAlign
-    tctx.textBaseline = 'top'
-    if ('letterSpacing' in tctx) {
-      ;(tctx as unknown as CanvasRenderingContext2D).letterSpacing = `${letterSpacing}px`
-    }
-    tctx.fillStyle = 'white'
-    let txOff: number
-    if (textAlign === 'left') txOff = 2
-    else if (textAlign === 'right') txOff = tw - 2
-    else txOff = tw / 2
-    for (let i = 0; i < lines.length; i++) {
-      tctx.fillText(lines[i], txOff, 2 + i * lineH)
-    }
-    tctx.globalCompositeOperation = 'source-in'
-    tctx.fillStyle = createFillStyle(tctx, fill, tw, th)
-    tctx.fillRect(0, 0, tw, th)
-    ctx.drawImage(temp, -tw / 2, yStart - 2)
-  } else {
-    if (fill.type === 'solid') {
-      ctx.fillStyle = fill.color
-    } else {
-      ctx.fillStyle = '#ffffff'
-    }
-    for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], xOffset, yStart + i * lineH)
     }
   }
 }

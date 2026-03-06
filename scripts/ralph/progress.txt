@@ -1,4 +1,36 @@
 # Ralph Progress Log
-Started: Sat Mar  7 2026 (ux-visual-polish run)
-Browser-verified fixes. Each story validated via Playwright screenshots.
+Started: Sat Mar  7 03:07:54 IST 2026
+---
+## US-401: Add TextRun type and migrate TextLayer data model ✅
+- Added TextRun interface to types.ts with per-run formatting overrides
+- Added runs: TextRun[] field to TextLayer interface
+- Updated addTextLayer() to create layers with runs: [{ text: '' }]
+- Created lib/rich-text-utils.ts with getPlainText, runsFromPlainText, splitRunsAtIndex, migrateTextLayerRuns
+- Updated updateTextProperties() to sync content→runs
+- Updated VPD save/load with migration for old layers without runs
+- Updated deepCloneLayer to clone runs array
+- Lint passes, browser test confirms text creation still works
+---
+## US-402: Run-aware text rendering on canvas ✅
+- Refactored renderTextLayer to use layer.runs instead of flat content/font props
+- Added helper functions: resolveRunFont, splitRunsToLines, measureRunLines
+- Each run renders with its own resolved formatting (fontSize, fontFamily, fontWeight, fontStyle, fill, letterSpacing)
+- Non-boxWidth text splits runs into lines by \n, renders segments left-to-right with correct horizontal offsets
+- Gradient fills use composite approach with per-run font settings
+- BoxWidth text uses flat rendering path (run-aware wrapping deferred to US-403)
+- Empty runs are skipped during rendering
+- Lint passes, browser test confirms single-run text renders identically to before
+---
+## US-403: Run-aware text measurement and line wrapping ✅
+- Created layoutTextRuns() in rich-text-utils.ts — shared layout engine returning TextLine[] with RunSegment[]
+- Handles both newline-split (non-boxWidth) and word-wrap (boxWidth) modes with per-run fonts
+- Word wrapping groups consecutive word atoms across runs so cross-run words don't break
+- Updated measureTextLayer() in layer-utils.ts to use layoutTextRuns for correct multi-run dimensions
+- Updated measureCursorPosition() to walk run segments with per-run font measurement
+- Updated findCursorIndexFromLocal() to iterate segments with per-run font for accurate click-to-cursor
+- Updated renderTextLayer() in layer-render.ts to use layoutTextRuns for both boxWidth and non-boxWidth paths
+- Removed old flat rendering path (renderTextLayerFlat, wrapText, splitLinesWithOffsets, createTextMeasureCtx)
+- Removed old run helpers from renderer (splitRunsToLines, measureRunLines) — now uses shared layout
+- Added RunSegment and TextLine types, resolveRunFont helper exported from rich-text-utils
+- Lint and typecheck pass
 ---

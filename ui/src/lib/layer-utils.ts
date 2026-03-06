@@ -1,4 +1,5 @@
 import type { Layer, GroupLayer } from '@/store/types'
+import { layoutTextRuns, type TextLine } from '@/lib/rich-text-utils'
 
 export function findLayerById(layers: Layer[], id: string): Layer | null {
   for (const layer of layers) {
@@ -79,52 +80,29 @@ export function getLayerDimensions(layer: Layer): { width: number; height: numbe
 }
 
 const TEXT_MIN_WIDTH = 100
-const TEXT_MIN_LINE_HEIGHT_FACTOR = 1
 
 function measureTextLayer(layer: Layer & { type: 'text' }): { width: number; height: number } {
-  const canvas = new OffscreenCanvas(1, 1)
-  const ctx = canvas.getContext('2d')!
-  ctx.font = `${layer.fontStyle} ${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`
-
-  const lineH = layer.fontSize * layer.lineHeight
-  const minHeight = layer.fontSize * layer.lineHeight * TEXT_MIN_LINE_HEIGHT_FACTOR
+  const minHeight = layer.fontSize * layer.lineHeight
 
   if (!layer.content) {
     return { width: TEXT_MIN_WIDTH, height: minHeight }
   }
 
+  const layout = layoutTextRuns(layer)
+  const totalHeight = getTotalHeight(layout)
+
   if (layer.boxWidth !== null) {
-    const lines = wrapText(ctx, layer.content, layer.boxWidth)
-    return { width: layer.boxWidth, height: lines.length * lineH }
+    return { width: layer.boxWidth, height: totalHeight }
   }
 
-  const lines = layer.content.split('\n')
-  const maxLineWidth = Math.max(...lines.map((l) => ctx.measureText(l).width))
-  return { width: Math.ceil(maxLineWidth), height: Math.ceil(lines.length * lineH) }
+  const maxLineWidth = Math.max(0, ...layout.map((l) => l.width))
+  return { width: Math.ceil(maxLineWidth), height: Math.ceil(totalHeight) }
 }
 
-function wrapText(
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-  text: string,
-  maxWidth: number,
-): string[] {
-  const paragraphs = text.split('\n')
-  const lines: string[] = []
-  for (const para of paragraphs) {
-    const words = para.split(' ')
-    let line = ''
-    for (const word of words) {
-      const testLine = line ? `${line} ${word}` : word
-      if (ctx.measureText(testLine).width > maxWidth && line) {
-        lines.push(line)
-        line = word
-      } else {
-        line = testLine
-      }
-    }
-    lines.push(line)
-  }
-  return lines
+function getTotalHeight(layout: TextLine[]): number {
+  if (layout.length === 0) return 0
+  const last = layout[layout.length - 1]
+  return last.yOffset + last.lineHeight
 }
 
 function getGroupBounds(group: GroupLayer): { width: number; height: number } {
@@ -149,121 +127,67 @@ function getGroupBounds(group: GroupLayer): { width: number; height: number } {
   return { width: maxX - minX, height: maxY - minY }
 }
 
-/** Set up a measurement context identical to renderTextLayer's font config. */
-function createTextMeasureCtx(layer: Layer & { type: 'text' }): OffscreenCanvasRenderingContext2D {
-  const canvas = new OffscreenCanvas(1, 1)
-  const ctx = canvas.getContext('2d')!
-  ctx.font = `${layer.fontStyle} ${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`
-  ctx.textAlign = layer.textAlign
-  ctx.textBaseline = 'top'
-  if ('letterSpacing' in ctx) {
-    ;(ctx as unknown as CanvasRenderingContext2D).letterSpacing = `${layer.letterSpacing}px`
-  }
-  return ctx
-}
-
-/** Split text into lines with character offset tracking (for cursor mapping). */
-function splitLinesWithOffsets(
-  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-  content: string,
-  maxWidth: number | null,
-): Array<{ text: string; startOffset: number }> {
-  if (maxWidth !== null) {
-    const paragraphs = content.split('\n')
-    const result: Array<{ text: string; startOffset: number }> = []
-    let offset = 0
-    for (const para of paragraphs) {
-      const words = para.split(' ')
-      let line = ''
-      let lineStart = offset
-      for (const word of words) {
-        const testLine = line ? `${line} ${word}` : word
-        if (ctx.measureText(testLine).width > maxWidth && line) {
-          result.push({ text: line, startOffset: lineStart })
-          lineStart = lineStart + line.length + 1
-          line = word
-        } else {
-          line = testLine
-        }
-      }
-      result.push({ text: line, startOffset: lineStart })
-      offset += para.length + 1
-    }
-    return result
-  }
-
-  const lines = content.split('\n')
-  let offset = 0
-  return lines.map((text) => {
-    const entry = { text, startOffset: offset }
-    offset += text.length + 1
-    return entry
-  })
-}
-
 /**
  * Given a TextLayer and a cursor index, return the cursor position
  * in the layer's local coordinate space (same space renderTextLayer draws in).
- * The returned localX/localY are in pre-scale layer coords.
  */
 export function measureCursorPosition(
   layer: Layer & { type: 'text' },
   cursorIndex: number,
 ): { localX: number; localY: number } {
-  const ctx = createTextMeasureCtx(layer)
-  const lineEntries = splitLinesWithOffsets(ctx, layer.content, layer.boxWidth)
-
-  const lineH = layer.fontSize * layer.lineHeight
-  const totalHeight = lineEntries.length * lineH
+  const layout = layoutTextRuns(layer)
+  const totalHeight = getTotalHeight(layout)
 
   // Find which line the cursor is on
-  let lineIdx = lineEntries.length - 1
-  for (let i = 0; i < lineEntries.length; i++) {
-    const nextStart = i + 1 < lineEntries.length ? lineEntries[i + 1].startOffset : Infinity
+  let lineIdx = layout.length - 1
+  for (let i = 0; i < layout.length; i++) {
+    const nextStart = i + 1 < layout.length ? layout[i + 1].startOffset : Infinity
     if (cursorIndex < nextStart) {
       lineIdx = i
       break
     }
   }
 
-  const entry = lineEntries[lineIdx]
-  const col = Math.min(cursorIndex - entry.startOffset, entry.text.length)
-  const textBeforeCursor = entry.text.substring(0, col)
+  const line = layout[lineIdx]
 
-  // Measure width of text before cursor
-  const cursorW = ctx.measureText(textBeforeCursor).width
+  // Measure width of text before cursor within the line's segments
+  const canvas = new OffscreenCanvas(1, 1)
+  const ctx = canvas.getContext('2d')!
+  let cursorW = 0
+  let remaining = cursorIndex - line.startOffset
 
-  // Compute textBlockWidth (same as renderTextLayer)
+  for (const seg of line.segments) {
+    if (remaining <= 0) break
+    const charsInSeg = Math.min(remaining, seg.text.length)
+    ctx.font = seg.font
+    if ('letterSpacing' in ctx) {
+      ;(ctx as CanvasRenderingContext2D).letterSpacing = `${seg.letterSpacing}px`
+    }
+    cursorW += ctx.measureText(seg.text.substring(0, charsInSeg)).width
+    remaining -= charsInSeg
+  }
+
+  // textBlockWidth
   let textBlockWidth: number
   if (layer.boxWidth !== null) {
     textBlockWidth = layer.boxWidth
   } else {
-    textBlockWidth = Math.max(...lineEntries.map((e) => ctx.measureText(e.text).width))
-    if (!isFinite(textBlockWidth)) textBlockWidth = 0
+    textBlockWidth = Math.max(0, ...layout.map((l) => l.width))
   }
 
-  // X offset based on alignment (same as renderTextLayer)
-  let xOffset: number
-  if (layer.textAlign === 'left') xOffset = -textBlockWidth / 2
-  else if (layer.textAlign === 'right') xOffset = textBlockWidth / 2
-  else xOffset = 0
-
-  // For cursor positioning, we need the left edge of the character position.
-  // With textAlign='left', fillText starts at xOffset, so cursor is at xOffset + cursorW.
-  // With textAlign='center', fillText centers at xOffset (0), so cursor is at -lineW/2 + cursorW.
-  // With textAlign='right', fillText ends at xOffset, so cursor is at xOffset - lineW + cursorW.
-  const lineW = ctx.measureText(entry.text).width
+  // X positioning based on alignment
+  const lineW = line.width
   let localX: number
   if (layer.textAlign === 'left') {
-    localX = xOffset + cursorW
+    localX = -textBlockWidth / 2 + cursorW
   } else if (layer.textAlign === 'right') {
-    localX = xOffset - lineW + cursorW
+    localX = textBlockWidth / 2 - lineW + cursorW
   } else {
     localX = -lineW / 2 + cursorW
   }
 
   const yStart = -totalHeight / 2
-  const localY = yStart + lineIdx * lineH
+  const localY = yStart + line.yOffset
 
   return { localX, localY }
 }
@@ -277,56 +201,62 @@ export function findCursorIndexFromLocal(
   localX: number,
   localY: number,
 ): number {
-  const ctx = createTextMeasureCtx(layer)
-  const lineEntries = splitLinesWithOffsets(ctx, layer.content, layer.boxWidth)
+  const layout = layoutTextRuns(layer)
+  if (layout.length === 0) return 0
 
-  if (lineEntries.length === 0) return 0
-
-  const lineH = layer.fontSize * layer.lineHeight
-  const totalHeight = lineEntries.length * lineH
+  const totalHeight = getTotalHeight(layout)
   const yStart = -totalHeight / 2
 
-  // Determine which line
-  let lineIdx = Math.floor((localY - yStart) / lineH)
-  lineIdx = Math.max(0, Math.min(lineIdx, lineEntries.length - 1))
+  // Find which line by Y position
+  let lineIdx = layout.length - 1
+  for (let i = 0; i < layout.length; i++) {
+    if (localY < yStart + layout[i].yOffset + layout[i].lineHeight) {
+      lineIdx = i
+      break
+    }
+  }
 
-  const entry = lineEntries[lineIdx]
+  const line = layout[lineIdx]
 
-  // Compute textBlockWidth
+  // textBlockWidth
   let textBlockWidth: number
   if (layer.boxWidth !== null) {
     textBlockWidth = layer.boxWidth
   } else {
-    textBlockWidth = Math.max(...lineEntries.map((e) => ctx.measureText(e.text).width))
-    if (!isFinite(textBlockWidth)) textBlockWidth = 0
+    textBlockWidth = Math.max(0, ...layout.map((l) => l.width))
   }
 
-  // X offset based on alignment
-  let xOffset: number
-  if (layer.textAlign === 'left') xOffset = -textBlockWidth / 2
-  else if (layer.textAlign === 'right') xOffset = textBlockWidth / 2
-  else xOffset = 0
-
-  // Compute line start X in local space
-  const lineW = ctx.measureText(entry.text).width
+  // Line start X in local space
+  const lineW = line.width
   let lineStartX: number
-  if (layer.textAlign === 'left') lineStartX = xOffset
-  else if (layer.textAlign === 'right') lineStartX = xOffset - lineW
+  if (layer.textAlign === 'left') lineStartX = -textBlockWidth / 2
+  else if (layer.textAlign === 'right') lineStartX = textBlockWidth / 2 - lineW
   else lineStartX = -lineW / 2
 
-  // Find closest character boundary
-  let bestCol = 0
+  // Walk through segments to find closest character boundary
+  const canvas = new OffscreenCanvas(1, 1)
+  const ctx = canvas.getContext('2d')!
+  let bestOffset = line.startOffset
   let bestDist = Math.abs(localX - lineStartX)
-  for (let i = 1; i <= entry.text.length; i++) {
-    const w = ctx.measureText(entry.text.substring(0, i)).width
-    const dist = Math.abs(localX - (lineStartX + w))
-    if (dist < bestDist) {
-      bestDist = dist
-      bestCol = i
+  let x = lineStartX
+
+  for (const seg of line.segments) {
+    ctx.font = seg.font
+    if ('letterSpacing' in ctx) {
+      ;(ctx as CanvasRenderingContext2D).letterSpacing = `${seg.letterSpacing}px`
     }
+    for (let i = 1; i <= seg.text.length; i++) {
+      const w = ctx.measureText(seg.text.substring(0, i)).width
+      const dist = Math.abs(localX - (x + w))
+      if (dist < bestDist) {
+        bestDist = dist
+        bestOffset = seg.startOffset + i
+      }
+    }
+    x += seg.width
   }
 
-  return entry.startOffset + bestCol
+  return bestOffset
 }
 
-export { wrapText, measureTextLayer }
+export { measureTextLayer }

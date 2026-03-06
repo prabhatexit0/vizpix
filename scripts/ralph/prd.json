@@ -18,7 +18,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "This is the foundation. Keep backward compat so existing text layers still work. The 'content' field should be derived from runs for any code that reads it. Key files: types.ts, layers-slice.ts. Add a new lib/rich-text-utils.ts for run manipulation helpers."
     },
     {
@@ -36,7 +36,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "The hardest part is horizontal positioning. For each line, iterate through the runs that fall on that line, measuring each run's contribution to the line width. Then render each run at the correct x offset. The line height for a mixed-size line should be max(fontSize * lineHeight) across all runs on that line. Start with same-size runs rendering correctly, then handle mixed sizes."
     },
     {
@@ -53,7 +53,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "This is the trickiest story. The line-wrapping algorithm needs to track run boundaries while wrapping. A run can span multiple lines (its text gets split across lines at word boundaries). Each line becomes a list of segments, where each segment references its parent run. Create a new type: type TextLine = { segments: RunSegment[], lineHeight: number, width: number, yOffset: number }. Build a layoutTextRuns(layer) function that returns TextLine[]."
     },
     {
