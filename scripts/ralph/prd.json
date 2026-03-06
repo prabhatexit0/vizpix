@@ -21,7 +21,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "This is the foundation component. Use pointer capture for smooth drag across the screen. Track delta from pointerdown position. The label and input should be in a flex row. Styling: dark bg, compact h-7, text-xs. Match existing input styling."
     },
     {
@@ -39,7 +39,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Layout: label row on top (with scrub), slider below spanning full width, number input to the right of slider. Use the existing Slider component from components/ui/slider.tsx. The input should be w-14 to show 3-4 digits."
     },
     {
@@ -56,7 +56,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Replace the current Input type=number fields in properties-panel.tsx (lines ~142-228). The onCommit callback should call pushSnapshot before the first change, then batch all scrub changes into one undo entry."
     },
     {

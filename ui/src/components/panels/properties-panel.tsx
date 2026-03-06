@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useEditorStore } from '@/store'
 import { Input } from '@/components/ui/input'
 import { ScrubInput } from '@/components/ui/scrub-input'
@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Slider } from '@/components/ui/slider'
+import { SliderInput } from '@/components/ui/slider-input'
 import { Button } from '@/components/ui/button'
 import { BLEND_MODES } from '@/lib/constants'
 import type { BlendMode, Fill, FontWeight, TextRun } from '@/store/types'
@@ -82,26 +82,9 @@ export function PropertiesPanel() {
     [activeLayerId, hasRangeSelection, pushSnapshot, applyTextFormatting, updateTextProperties],
   )
 
-  const sliderDragRef = useRef(false)
-
   const onInputFocus = useCallback(() => {
     pushSnapshot()
   }, [pushSnapshot])
-
-  const onSliderChange = useCallback(
-    ([v]: number[]) => {
-      if (!sliderDragRef.current) {
-        pushSnapshot()
-        sliderDragRef.current = true
-      }
-      setOpacity(activeLayerId!, Math.max(0, Math.min(100, v)) / 100)
-    },
-    [pushSnapshot, setOpacity, activeLayerId],
-  )
-
-  const onSliderCommit = useCallback(() => {
-    sliderDragRef.current = false
-  }, [])
 
   const clampedUpdate = useCallback(
     (
@@ -222,19 +205,16 @@ export function PropertiesPanel() {
       />
 
       {/* Opacity */}
-      <div>
-        <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-          Opacity — {Math.round(layer.opacity * 100)}%
-        </label>
-        <Slider
-          value={[layer.opacity * 100]}
-          min={0}
-          max={100}
-          step={1}
-          onValueChange={onSliderChange}
-          onValueCommit={onSliderCommit}
-        />
-      </div>
+      <SliderInput
+        label="Opacity"
+        value={Math.round(layer.opacity * 100)}
+        min={0}
+        max={100}
+        step={1}
+        suffix="%"
+        onValueChange={(v) => setOpacity(activeLayerId, Math.max(0, Math.min(100, v)) / 100)}
+        onValueCommit={() => pushSnapshot()}
+      />
 
       {/* Blend Mode */}
       <div>
