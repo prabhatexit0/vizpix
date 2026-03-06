@@ -329,14 +329,23 @@ export function PropertiesPanel() {
             <Select
               value={layer.fill.type}
               onValueChange={(v) => {
+                const currentFill = layer.fill
+                const baseColor =
+                  currentFill.type === 'solid'
+                    ? currentFill.color
+                    : currentFill.type === 'linear-gradient' ||
+                        currentFill.type === 'radial-gradient'
+                      ? (currentFill.gradient.stops[0]?.color ?? '#3b82f6')
+                      : '#3b82f6'
+
                 const fillMap: Record<string, () => Fill> = {
                   none: () => ({ type: 'none' as const }),
-                  solid: () => ({ type: 'solid' as const, color: '#3b82f6' }),
+                  solid: () => ({ type: 'solid' as const, color: baseColor }),
                   'linear-gradient': () => ({
                     type: 'linear-gradient' as const,
                     gradient: {
                       stops: [
-                        { offset: 0, color: '#ff0000' },
+                        { offset: 0, color: baseColor },
                         { offset: 1, color: '#0000ff' },
                       ],
                       angle: 90,
@@ -346,7 +355,7 @@ export function PropertiesPanel() {
                     type: 'radial-gradient' as const,
                     gradient: {
                       stops: [
-                        { offset: 0, color: '#ffffff' },
+                        { offset: 0, color: baseColor },
                         { offset: 1, color: '#000000' },
                       ],
                       angle: 0,
