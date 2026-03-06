@@ -17,6 +17,7 @@ import {
 import { useEditorStore } from '@/store'
 import { cn } from '@/lib/utils'
 import { Slider } from '@/components/ui/slider'
+import { Input } from '@/components/ui/input'
 import { findLayerById } from '@/lib/layer-utils'
 import { renderLayerToContext } from '@/lib/layer-render'
 import type { Layer } from '@/store/types'
@@ -58,6 +59,9 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
   const toggleLock = useEditorStore((s) => s.toggleLock)
   const setOpacity = useEditorStore((s) => s.setOpacity)
   const renameLayer = useEditorStore((s) => s.renameLayer)
+  const updateTextProperties = useEditorStore((s) => s.updateTextProperties)
+  const updateShapeProperties = useEditorStore((s) => s.updateShapeProperties)
+  const pushSnapshot = useEditorStore((s) => s.pushSnapshot)
 
   const [editing, setEditing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -223,6 +227,83 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
             />
             <span className="w-7 shrink-0 text-right text-[11px] text-neutral-500 tabular-nums">
               {Math.round(layer.opacity * 100)}%
+            </span>
+          </div>
+        )}
+
+        {/* Inline properties (only for active) */}
+        {isActive && layer.type === 'text' && (
+          <div className="flex items-center gap-1.5 pl-10" onClick={(e) => e.stopPropagation()}>
+            <Input
+              className="h-6 w-16 px-1 text-[11px]"
+              defaultValue={layer.fontFamily}
+              onFocus={pushSnapshot}
+              onBlur={(e) =>
+                updateTextProperties(layer.id, { fontFamily: e.target.value || layer.fontFamily })
+              }
+            />
+            <Input
+              type="number"
+              className="h-6 w-12 px-1 text-[11px]"
+              defaultValue={layer.fontSize}
+              onFocus={pushSnapshot}
+              onBlur={(e) => {
+                const v = parseFloat(e.target.value)
+                if (v > 0) updateTextProperties(layer.id, { fontSize: v })
+              }}
+            />
+            {layer.fill.type === 'solid' && (
+              <input
+                type="color"
+                className="h-6 w-6 shrink-0 cursor-pointer rounded border border-white/12 bg-transparent"
+                value={layer.fill.color}
+                onFocus={pushSnapshot}
+                onChange={(e) =>
+                  updateTextProperties(layer.id, {
+                    fill: { type: 'solid', color: e.target.value },
+                  })
+                }
+              />
+            )}
+          </div>
+        )}
+
+        {isActive && layer.type === 'shape' && (
+          <div className="flex items-center gap-1.5 pl-10" onClick={(e) => e.stopPropagation()}>
+            {layer.fill.type === 'solid' && (
+              <input
+                type="color"
+                className="h-6 w-6 shrink-0 cursor-pointer rounded border border-white/12 bg-transparent"
+                value={layer.fill.color}
+                onFocus={pushSnapshot}
+                onChange={(e) =>
+                  updateShapeProperties(layer.id, {
+                    fill: { type: 'solid', color: e.target.value },
+                  })
+                }
+              />
+            )}
+            <Input
+              type="number"
+              className="h-6 w-12 px-1 text-[11px]"
+              defaultValue={layer.stroke.width}
+              onFocus={pushSnapshot}
+              onBlur={(e) => {
+                const v = parseFloat(e.target.value)
+                if (v >= 0)
+                  updateShapeProperties(layer.id, {
+                    stroke: { ...layer.stroke, width: v },
+                  })
+              }}
+            />
+            <span className="text-[10px] text-neutral-500">stroke</span>
+          </div>
+        )}
+
+        {isActive && layer.type === 'image' && (
+          <div className="flex items-center gap-1 pl-10">
+            <span className="text-[10px] text-neutral-500">
+              {layer.width} x {layer.height}
             </span>
           </div>
         )}
