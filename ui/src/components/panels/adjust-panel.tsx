@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState, useEffect } from 'react'
 import { useEditorStore } from '@/store'
-import { Slider } from '@/components/ui/slider'
+import { SliderInput } from '@/components/ui/slider-input'
 import { Button } from '@/components/ui/button'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { findLayerById } from '@/lib/layer-utils'
@@ -29,7 +29,6 @@ interface SliderDef {
   min: number
   max: number
   step: number
-  format?: (v: number) => string
 }
 
 const SECTIONS: { label: string; sliders: SliderDef[] }[] = [
@@ -45,22 +44,8 @@ const SECTIONS: { label: string; sliders: SliderDef[] }[] = [
     label: 'Effects',
     sliders: [
       { key: 'blur', label: 'Blur', min: 0, max: 50, step: 1 },
-      {
-        key: 'sharpen',
-        label: 'Sharpen',
-        min: 0,
-        max: 3,
-        step: 0.1,
-        format: (v) => v.toFixed(1),
-      },
-      {
-        key: 'posterize',
-        label: 'Posterize',
-        min: 0,
-        max: 32,
-        step: 1,
-        format: (v) => (v === 0 ? 'Off' : `${v} colors`),
-      },
+      { key: 'sharpen', label: 'Sharpen', min: 0, max: 3, step: 0.1 },
+      { key: 'posterize', label: 'Posterize', min: 0, max: 32, step: 1 },
     ],
   },
 ]
@@ -202,30 +187,30 @@ export function AdjustPanel() {
           <p className="text-[11px] font-medium tracking-wider text-neutral-500 uppercase">
             {section.label}
           </p>
-          {section.sliders.map(({ key, label, min, max, step, format }) => (
-            <div key={key} className={processing ? 'pointer-events-none opacity-50' : ''}>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label className="text-xs tracking-wide text-neutral-500 uppercase">{label}</label>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-neutral-400 tabular-nums">
-                    {format ? format(values[key]) : values[key]}
-                  </span>
-                  {values[key] !== DEFAULTS[key] && (
-                    <button
-                      onClick={() => handleChange(key, DEFAULTS[key])}
-                      className="rounded p-0.5 text-neutral-500 hover:bg-white/10 hover:text-neutral-300"
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
-                </div>
+          {section.sliders.map(({ key, label, min, max, step }) => (
+            <div
+              key={key}
+              className={processing ? 'pointer-events-none opacity-50' : ''}
+              onDoubleClick={() => handleChange(key, DEFAULTS[key])}
+            >
+              <div className="mb-0.5 flex items-center justify-between">
+                {values[key] !== DEFAULTS[key] && (
+                  <button
+                    onClick={() => handleChange(key, DEFAULTS[key])}
+                    className="ml-auto rounded p-0.5 text-neutral-500 hover:bg-white/10 hover:text-neutral-300"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
               </div>
-              <Slider
-                value={[values[key]]}
+              <SliderInput
+                label={label}
+                value={values[key]}
                 min={min}
                 max={max}
                 step={step}
-                onValueChange={([v]) => handleChange(key, v)}
+                precision={step < 1 ? 1 : 0}
+                onValueChange={(v) => handleChange(key, v)}
               />
             </div>
           ))}
