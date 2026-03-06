@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand'
-import type { EditorState, HistorySlice, LayerSnapshot, Layer } from '../types'
+import type { EditorState, HistoryEntry, HistorySlice, LayerSnapshot, Layer } from '../types'
 import { HISTORY_MAX } from '@/lib/constants'
 import { decodeToBitmap, batchDecodeToBitmaps } from '@/lib/canvas-utils'
 
@@ -78,14 +78,14 @@ function buildSnapshotMap(snapshots: LayerSnapshot[], map: Map<string, LayerSnap
   }
 }
 
-function estimateUniqueMemory(stacks: LayerSnapshot[][][]): number {
+function estimateUniqueMemory(stacks: HistoryEntry[][]): number {
   const seen = new Set<Uint8Array>()
-  let total = 0
   for (const stack of stacks) {
-    for (const snap of stack) {
-      collectUniqueBytes(snap, seen)
+    for (const entry of stack) {
+      collectUniqueBytes(entry.layers, seen)
     }
   }
+  let total = 0
   for (const bytes of seen) {
     total += bytes.byteLength
   }
@@ -235,10 +235,11 @@ export const createHistorySlice: StateCreator<EditorState, [], [], HistorySlice>
   redoStack: [],
 
   pushSnapshot: () => {
-    const { layers, undoStack, redoStack } = get()
-    const prevSnap = undoStack.length > 0 ? undoStack[undoStack.length - 1] : null
-    const snap = snapshotLayersWithDelta(layers, prevSnap)
-    const stack = [...undoStack, snap]
+    const { layers, activeLayerId, undoStack, redoStack } = get()
+    const prevEntry = undoStack.length > 0 ? undoStack[undoStack.length - 1] : null
+    const snap = snapshotLayersWithDelta(layers, prevEntry?.layers ?? null)
+    const entry: HistoryEntry = { layers: snap, activeLayerId }
+    const stack = [...undoStack, entry]
 
     const memoryBytes = estimateUniqueMemory([stack, redoStack])
     const memoryMB = memoryBytes / (1024 * 1024)
@@ -262,32 +263,34 @@ export const createHistorySlice: StateCreator<EditorState, [], [], HistorySlice>
   },
 
   undo: async () => {
-    const { undoStack, layers } = get()
+    const { undoStack, layers, activeLayerId } = get()
     if (undoStack.length === 0) return
     const stack = [...undoStack]
-    const prev = stack.pop()!
-    const currentSnap = snapshotLayers(layers)
-    const restored = await restoreLayers(prev, layers)
+    const prevEntry = stack.pop()!
+    const currentEntry: HistoryEntry = { layers: snapshotLayers(layers), activeLayerId }
+    const restored = await restoreLayers(prevEntry.layers, layers)
+    const restoredActiveId = findActiveId(restored, prevEntry.activeLayerId)
     set((s) => ({
       undoStack: stack,
-      redoStack: [...s.redoStack, currentSnap],
+      redoStack: [...s.redoStack, currentEntry],
       layers: restored,
-      activeLayerId: findActiveId(restored, s.activeLayerId),
+      activeLayerId: restoredActiveId,
     }))
   },
 
   redo: async () => {
-    const { redoStack, layers } = get()
+    const { redoStack, layers, activeLayerId } = get()
     if (redoStack.length === 0) return
     const stack = [...redoStack]
-    const next = stack.pop()!
-    const currentSnap = snapshotLayers(layers)
-    const restored = await restoreLayers(next, layers)
+    const nextEntry = stack.pop()!
+    const currentEntry: HistoryEntry = { layers: snapshotLayers(layers), activeLayerId }
+    const restored = await restoreLayers(nextEntry.layers, layers)
+    const restoredActiveId = findActiveId(restored, nextEntry.activeLayerId)
     set((s) => ({
       redoStack: stack,
-      undoStack: [...s.undoStack, currentSnap],
+      undoStack: [...s.undoStack, currentEntry],
       layers: restored,
-      activeLayerId: findActiveId(restored, s.activeLayerId),
+      activeLayerId: restoredActiveId,
     }))
   },
 
@@ -295,10 +298,10 @@ export const createHistorySlice: StateCreator<EditorState, [], [], HistorySlice>
   canRedo: () => get().redoStack.length > 0,
 })
 
-function findActiveId(layers: Layer[], currentId: string | null): string | null {
-  if (!currentId) return layers[layers.length - 1]?.id ?? null
-  if (findById(layers, currentId)) return currentId
-  return layers[layers.length - 1]?.id ?? null
+function findActiveId(layers: Layer[], snapshotActiveId: string | null): string | null {
+  if (!snapshotActiveId) return null
+  if (findById(layers, snapshotActiveId)) return snapshotActiveId
+  return layers.length > 0 ? layers[layers.length - 1].id : null
 }
 
 function findById(layers: Layer[], id: string): boolean {

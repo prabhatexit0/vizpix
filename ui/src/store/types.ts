@@ -247,9 +247,14 @@ export interface ToolsSlice {
   setEditingTextLayerId: (id: string | null) => void
 }
 
+export interface HistoryEntry {
+  layers: LayerSnapshot[]
+  activeLayerId: string | null
+}
+
 export interface HistorySlice {
-  undoStack: LayerSnapshot[][]
-  redoStack: LayerSnapshot[][]
+  undoStack: HistoryEntry[]
+  redoStack: HistoryEntry[]
   pushSnapshot: () => void
   undo: () => void
   redo: () => void
