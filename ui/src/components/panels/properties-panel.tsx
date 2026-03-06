@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select'
 import { SliderInput } from '@/components/ui/slider-input'
 import { ColorPicker } from '@/components/ui/color-picker'
+import { RotationDial } from '@/components/ui/rotation-dial'
 import { Button } from '@/components/ui/button'
 import { BLEND_MODES } from '@/lib/constants'
 import type { BlendMode, Fill, FontWeight, TextRun } from '@/store/types'
@@ -188,14 +189,21 @@ export function PropertiesPanel() {
       </div>
 
       {/* Rotation */}
-      <ScrubInput
-        label="Rotation"
-        value={Math.round(((transform.rotation % 360) + 360) % 360)}
-        step={1}
-        suffix="°"
-        onChange={(v) => setTransform(activeLayerId, { rotation: v })}
-        onCommit={() => pushSnapshot()}
-      />
+      <div className="flex items-center gap-2">
+        <ScrubInput
+          label="Rotation"
+          value={Math.round(((transform.rotation % 360) + 360) % 360)}
+          step={1}
+          suffix="°"
+          onChange={(v) => setTransform(activeLayerId, { rotation: v })}
+          onCommit={() => pushSnapshot()}
+        />
+        <RotationDial
+          value={Math.round(((transform.rotation % 360) + 360) % 360)}
+          onChange={(v) => setTransform(activeLayerId, { rotation: v })}
+          onCommit={() => pushSnapshot()}
+        />
+      </div>
 
       {/* Opacity */}
       <SliderInput

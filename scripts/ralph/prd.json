@@ -119,7 +119,7 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Stroke width is currently a plain number input. A slider helps users find the right width quickly."
     },
     {
@@ -139,7 +139,7 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "The current color picker is a native browser <input type=color> which is ugly and inconsistent across browsers. A custom HSL picker gives us full control. Render the SV square using a canvas or CSS gradient overlay. Hue bar is a horizontal rainbow gradient slider."
     },
     {
@@ -156,7 +156,7 @@
         "Typecheck passes"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Select-all-on-focus is standard in design tools. It means you can click an input and immediately type '42' to replace the value, instead of having to select-all manually first. Add tabIndex ordering to inputs."
     },
     {
@@ -173,7 +173,7 @@
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "Currently shape dimensions are shown as read-only. Making them editable with proportional constraints is a big UX win. The chain icon should be a small toggle between the W and H rows — on when constrained (blue), off when independent (gray)."
     },
     {
@@ -189,7 +189,7 @@
         "Typecheck passes"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": "The adjust panel already uses Slider + value display. Upgrade to SliderInput for consistency and add double-click-to-reset UX pattern."
     },
     {
