@@ -17,6 +17,22 @@ import { computeHistogram, type HistogramData } from '@/lib/histogram-utils'
 import { HistogramDisplay } from './histogram-display'
 import { findLayerById, getLayerDimensions } from '@/lib/layer-utils'
 
+const COMMON_FONTS = [
+  'Inter',
+  'Arial',
+  'Helvetica',
+  'Georgia',
+  'Times New Roman',
+  'Courier New',
+  'Verdana',
+  'Trebuchet MS',
+  'Impact',
+  'Comic Sans MS',
+  'monospace',
+  'serif',
+  'sans-serif',
+]
+
 export function PropertiesPanel() {
   const activeLayerId = useEditorStore((s) => s.activeLayerId)
   const editingTextLayerId = useEditorStore((s) => s.editingTextLayerId)
@@ -461,34 +477,61 @@ export function PropertiesPanel() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-                Font
-              </label>
-              <Input
-                value={layer.fontFamily}
-                onChange={(e) =>
-                  updateTextProperties(activeLayerId, { fontFamily: e.target.value })
+          <div>
+            <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
+              Font
+            </label>
+            <Select
+              value={COMMON_FONTS.includes(layer.fontFamily) ? layer.fontFamily : '__custom__'}
+              onValueChange={(v) => {
+                if (v !== '__custom__') {
+                  updateTextProperties(activeLayerId, { fontFamily: v })
                 }
-                className="h-8 text-xs"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-                Size
-              </label>
+              }}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COMMON_FONTS.map((font) => (
+                  <SelectItem key={font} value={font}>
+                    <span style={{ fontFamily: font }}>{font}</span>
+                  </SelectItem>
+                ))}
+                <SelectItem value="__custom__">Custom...</SelectItem>
+              </SelectContent>
+            </Select>
+            {!COMMON_FONTS.includes(layer.fontFamily) && (
               <Input
-                type="number"
-                value={layer.fontSize}
-                min={1}
+                className="mt-1 h-7 text-xs"
+                placeholder="Custom font name"
+                defaultValue={layer.fontFamily}
                 onFocus={onInputFocus}
-                onChange={(e) =>
-                  updateTextProperties(activeLayerId, { fontSize: Number(e.target.value) })
-                }
-                className="h-8 text-xs"
+                onBlur={(e) => {
+                  const v = e.target.value.trim()
+                  if (v) updateTextProperties(activeLayerId, { fontFamily: v })
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                }}
               />
-            </div>
+            )}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
+              Size
+            </label>
+            <Input
+              type="number"
+              value={layer.fontSize}
+              min={1}
+              onFocus={onInputFocus}
+              onChange={(e) =>
+                updateTextProperties(activeLayerId, { fontSize: Number(e.target.value) })
+              }
+              className="h-8 text-xs"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
