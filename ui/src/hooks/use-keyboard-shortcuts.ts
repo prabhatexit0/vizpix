@@ -14,8 +14,10 @@ export function useKeyboardShortcuts(
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      const tag = (e.target as HTMLElement).tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      const target = e.target as HTMLElement
+      const tag = target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable)
+        return
 
       const store = useEditorStore.getState()
 
