@@ -86,16 +86,28 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     setEditingTextLayerId(null)
   }, [setEditingTextLayerId])
 
-  // Re-focus the textarea if it loses focus while still editing
-  // (e.g. pointer capture on canvas steals focus)
-  const onBlur = useCallback(() => {
-    if (committedRef.current) return
-    requestAnimationFrame(() => {
-      if (!committedRef.current) {
-        textareaRef.current?.focus()
+  const onBlur = useCallback(
+    (e: React.FocusEvent) => {
+      if (committedRef.current) return
+
+      const related = e.relatedTarget as HTMLElement | null
+      const canvas = canvasRef.current
+
+      // If focus moved to a UI element outside the canvas, commit the edit
+      if (related && canvas && !canvas.contains(related)) {
+        commit()
+        return
       }
-    })
-  }, [])
+
+      // Focus lost to canvas (pointer capture) — refocus via microtask
+      queueMicrotask(() => {
+        if (!committedRef.current) {
+          textareaRef.current?.focus()
+        }
+      })
+    },
+    [canvasRef, commit],
+  )
 
   const onInput = useCallback(() => {
     const ta = textareaRef.current
