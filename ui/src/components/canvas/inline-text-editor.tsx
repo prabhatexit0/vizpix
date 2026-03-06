@@ -8,6 +8,7 @@ import {
   getLayerDimensions,
 } from '@/lib/layer-utils'
 import { setTextCursorClickCallback } from '@/hooks/use-canvas-interactions'
+import { TextFormatToolbar } from './text-format-toolbar'
 
 interface InlineTextEditorProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>
@@ -356,6 +357,16 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
             />
           ))}
         </svg>
+      )}
+      {/* Floating formatting toolbar */}
+      {layer && canvasRect && cursorIndex !== selectionEnd && (
+        <TextFormatToolbar
+          layer={layer}
+          viewport={viewport}
+          canvasRect={canvasRect}
+          selectionStart={cursorIndex}
+          selectionEnd={selectionEnd}
+        />
       )}
       {/* Blinking caret overlay */}
       {caretStyle && <div style={caretStyle} />}
