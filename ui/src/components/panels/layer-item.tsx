@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   Eye,
   EyeOff,
@@ -68,12 +68,42 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
 
   const [editing, setEditing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const thumbCanvasRef = useRef<HTMLCanvasElement>(null)
+  const thumbTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const commitRename = useCallback(() => {
     const value = inputRef.current?.value.trim()
     if (value && layer) renameLayer(layer.id, value)
     setEditing(false)
   }, [layer, renameLayer])
+
+  // Reactively update shape/text thumbnails when properties change
+  useEffect(() => {
+    if (!layer || (layer.type !== 'shape' && layer.type !== 'text')) return
+    const c = thumbCanvasRef.current
+    if (!c) return
+
+    if (thumbTimerRef.current) clearTimeout(thumbTimerRef.current)
+    thumbTimerRef.current = setTimeout(() => {
+      const ctx = c.getContext('2d')
+      if (!ctx) return
+      ctx.clearRect(0, 0, 32, 32)
+      ctx.save()
+      ctx.translate(16, 16)
+      ctx.scale(0.12, 0.12)
+      const tempLayer = {
+        ...layer,
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        opacity: 1,
+      }
+      renderLayerToContext(ctx, tempLayer as Layer, 256, 256)
+      ctx.restore()
+    }, 200)
+
+    return () => {
+      if (thumbTimerRef.current) clearTimeout(thumbTimerRef.current)
+    }
+  }, [layer])
 
   if (!layer) return null
 
@@ -122,26 +152,10 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
               />
             ) : layer.type === 'shape' || layer.type === 'text' ? (
               <canvas
+                ref={thumbCanvasRef}
                 className="h-full w-full object-contain"
                 width={32}
                 height={32}
-                ref={(c) => {
-                  if (!c) return
-                  const ctx = c.getContext('2d')
-                  if (!ctx) return
-                  ctx.clearRect(0, 0, 32, 32)
-                  ctx.save()
-                  ctx.translate(16, 16)
-                  ctx.scale(0.12, 0.12)
-                  // Render the layer at identity transform for thumbnail
-                  const tempLayer = {
-                    ...layer,
-                    transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
-                    opacity: 1,
-                  }
-                  renderLayerToContext(ctx, tempLayer as Layer, 256, 256)
-                  ctx.restore()
-                }}
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-neutral-500">
