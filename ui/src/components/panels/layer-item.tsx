@@ -13,6 +13,7 @@ import {
   Type,
   Folder,
   ChevronRight,
+  Pencil,
 } from 'lucide-react'
 import { useEditorStore } from '@/store'
 import { cn } from '@/lib/utils'
@@ -62,6 +63,8 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
   const updateTextProperties = useEditorStore((s) => s.updateTextProperties)
   const updateShapeProperties = useEditorStore((s) => s.updateShapeProperties)
   const pushSnapshot = useEditorStore((s) => s.pushSnapshot)
+  const setEditingTextLayerId = useEditorStore((s) => s.setEditingTextLayerId)
+  const setActiveTool = useEditorStore((s) => s.setActiveTool)
 
   const [editing, setEditing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -91,7 +94,16 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
       >
         <div className="relative flex min-w-0 items-center gap-2">
           {/* Type icon / thumbnail */}
-          <div className="h-8 w-8 shrink-0 overflow-hidden rounded border border-white/12 bg-neutral-800">
+          <div
+            className="h-8 w-8 shrink-0 overflow-hidden rounded border border-white/12 bg-neutral-800"
+            onDoubleClick={(e) => {
+              if (layer.type === 'text') {
+                e.stopPropagation()
+                setActiveTool('pointer')
+                setEditingTextLayerId(layer.id)
+              }
+            }}
+          >
             {layer.type === 'image' && layer.imageBitmap ? (
               <canvas
                 className="h-full w-full object-contain"
@@ -184,6 +196,18 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
 
           {/* Actions */}
           <div className="absolute right-0 flex items-center gap-0.5 rounded-md bg-neutral-800/90 px-0.5 opacity-0 backdrop-blur-sm transition-opacity duration-150 group-hover:opacity-100">
+            {layer.type === 'text' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setActiveTool('pointer')
+                  setEditingTextLayerId(layer.id)
+                }}
+                className="rounded p-1 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <Pencil size={13} />
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation()
