@@ -66,8 +66,12 @@ export function EditorCanvas() {
     if (!canvas || !container) return
     const dpr = window.devicePixelRatio || 1
     const { width, height } = container.getBoundingClientRect()
-    canvas.width = width * dpr
-    canvas.height = height * dpr
+    const newW = Math.round(width * dpr)
+    const newH = Math.round(height * dpr)
+    // Skip resize if dimensions haven't changed — avoids canvas clear flash
+    if (canvas.width === newW && canvas.height === newH) return
+    canvas.width = newW
+    canvas.height = newH
     canvas.style.width = `${width}px`
     canvas.style.height = `${height}px`
   }, [])

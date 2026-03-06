@@ -132,7 +132,7 @@ export function PropertiesPanel() {
   const dims = getLayerDimensions(layer)
 
   return (
-    <div className="flex flex-col gap-3 p-3">
+    <div className="flex flex-col gap-3 overflow-y-auto p-3">
       {/* Position */}
       <div className="grid grid-cols-2 gap-2">
         <div>

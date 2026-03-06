@@ -338,14 +338,16 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
         const store = useEditorStore.getState()
         if (tool === 'draw-rectangle') {
           store.addShapeLayer('rectangle', rect)
+          store.setActiveTool('pointer')
         } else if (tool === 'draw-ellipse') {
           store.addShapeLayer('ellipse', rect)
+          store.setActiveTool('pointer')
         } else if (tool === 'draw-text') {
           // Click = auto-width (no rect), drag = fixed-width
           store.addTextLayer(isClick ? undefined : rect)
+          // Switch tool without cleanup — the text layer is empty and that's expected
+          useEditorStore.setState({ activeTool: 'pointer' })
         }
-
-        store.setActiveTool('pointer')
         drawPreviewRef.current = null
       }
 
