@@ -37,6 +37,8 @@ export function PropertiesPanel() {
   const activeLayerId = useEditorStore((s) => s.activeLayerId)
   const editingTextLayerId = useEditorStore((s) => s.editingTextLayerId)
   const layer = useEditorStore((s) => findLayerById(s.layers, s.activeLayerId ?? ''))
+  const documentWidth = useEditorStore((s) => s.documentWidth)
+  const documentHeight = useEditorStore((s) => s.documentHeight)
   const setTransform = useEditorStore((s) => s.setTransform)
   const setOpacity = useEditorStore((s) => s.setOpacity)
   const setBlendMode = useEditorStore((s) => s.setBlendMode)
@@ -130,6 +132,9 @@ export function PropertiesPanel() {
 
   const { transform } = layer
   const dims = getLayerDimensions(layer)
+  // Display document-relative coordinates (0,0 = top-left of document)
+  const displayX = Math.round(transform.x + documentWidth / 2)
+  const displayY = Math.round(transform.y + documentHeight / 2)
 
   return (
     <div className="flex flex-col gap-3 overflow-y-auto p-3">
@@ -139,9 +144,11 @@ export function PropertiesPanel() {
           <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">X</label>
           <Input
             type="number"
-            value={Math.round(transform.x)}
+            value={displayX}
             onFocus={onInputFocus}
-            onChange={(e) => setTransform(activeLayerId, { x: Number(e.target.value) })}
+            onChange={(e) =>
+              setTransform(activeLayerId, { x: Number(e.target.value) - documentWidth / 2 })
+            }
             className="h-8 text-xs"
           />
         </div>
@@ -149,9 +156,11 @@ export function PropertiesPanel() {
           <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">Y</label>
           <Input
             type="number"
-            value={Math.round(transform.y)}
+            value={displayY}
             onFocus={onInputFocus}
-            onChange={(e) => setTransform(activeLayerId, { y: Number(e.target.value) })}
+            onChange={(e) =>
+              setTransform(activeLayerId, { y: Number(e.target.value) - documentHeight / 2 })
+            }
             className="h-8 text-xs"
           />
         </div>

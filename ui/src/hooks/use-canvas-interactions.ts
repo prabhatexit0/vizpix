@@ -252,7 +252,14 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
           } else if (!hitId && last.layerId === null) {
             // Double-click on empty canvas → create text layer at click point
             const store = useEditorStore.getState()
-            store.addTextLayer({ x: wx, y: wy, width: 0, height: 0 })
+            const { documentWidth, documentHeight } = store
+            const halfW = documentWidth / 2
+            const halfH = documentHeight / 2
+            // Clamp position to within document bounds with padding
+            const pad = 10
+            const clampedX = Math.max(-halfW + pad, Math.min(halfW - pad, wx))
+            const clampedY = Math.max(-halfH + pad, Math.min(halfH - pad, wy))
+            store.addTextLayer({ x: clampedX, y: clampedY, width: 0, height: 0 })
             useEditorStore.setState({ activeTool: 'pointer' })
             lastClickRef.current = { time: 0, layerId: null }
             ptr.down = false
@@ -353,8 +360,8 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
           store.addShapeLayer('ellipse', rect)
           store.setActiveTool('pointer')
         } else if (tool === 'draw-text') {
-          // Click = auto-width (no rect), drag = fixed-width
-          store.addTextLayer(isClick ? undefined : rect)
+          // Click = auto-width at click point, drag = fixed-width box
+          store.addTextLayer(isClick ? { x: rect.x, y: rect.y, width: 0, height: 0 } : rect)
           // Switch tool without cleanup — the text layer is empty and that's expected
           useEditorStore.setState({ activeTool: 'pointer' })
         }
