@@ -42,14 +42,14 @@ function PanelTabs() {
           Adjust
         </TabsTrigger>
       </TabsList>
-      <div className="flex-1 overflow-hidden">
-        <TabsContent value="layers" className="m-0 h-full">
+      <div className="min-h-0 flex-1">
+        <TabsContent value="layers" className="m-0 h-full overflow-y-auto">
           <LayersPanel />
         </TabsContent>
-        <TabsContent value="properties" className="m-0 h-full">
+        <TabsContent value="properties" className="m-0 h-full overflow-y-auto">
           <PropertiesPanel />
         </TabsContent>
-        <TabsContent value="adjust" className="m-0 h-full">
+        <TabsContent value="adjust" className="m-0 h-full overflow-y-auto">
           <AdjustPanel />
         </TabsContent>
       </div>
