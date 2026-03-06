@@ -229,11 +229,13 @@ export interface LayersSlice {
 
 export interface ViewportSlice {
   viewport: Viewport
+  viewportTarget: Viewport | null
   pan: (dx: number, dy: number) => void
   zoom: (factor: number, centerX?: number, centerY?: number) => void
   setZoom: (zoom: number) => void
   resetViewport: () => void
   fitToDocument: (canvasWidth: number, canvasHeight: number) => void
+  tickViewportAnimation: () => boolean
 }
 
 export interface ToolsSlice {

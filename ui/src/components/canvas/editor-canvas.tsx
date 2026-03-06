@@ -78,6 +78,7 @@ export function EditorCanvas() {
   // Render loop
   useEffect(() => {
     function frame() {
+      useEditorStore.getState().tickViewportAnimation()
       const canvas = canvasRef.current
       if (canvas) composite(canvas)
       rafRef.current = requestAnimationFrame(frame)
