@@ -113,6 +113,22 @@ export function Toolbar() {
     if (file) performLoad(file)
   }, [performLoad])
 
+  const iconSize = isMobile ? 20 : 20
+
+  const toolBtnClass = (active: boolean) =>
+    cn(
+      'flex items-center justify-center rounded-md transition-colors',
+      isMobile ? 'min-h-[44px] min-w-[44px] p-2.5' : 'p-2',
+      active
+        ? cn('bg-blue-500/30 text-blue-400', !isMobile && 'border-l-2 border-blue-500')
+        : 'text-neutral-400 hover:bg-white/10 hover:text-white',
+    )
+
+  const actionBtnClass = cn(
+    'flex items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-white/10 hover:text-white',
+    isMobile ? 'min-h-[44px] min-w-[44px] p-2.5' : 'p-2',
+  )
+
   const buttons = (
     <>
       {TOOLS.map(({ mode, icon: Icon, label, shortcut }) => (
@@ -120,14 +136,9 @@ export function Toolbar() {
           <TooltipTrigger asChild>
             <button
               onClick={() => setActiveTool(mode)}
-              className={cn(
-                'flex shrink-0 items-center justify-center rounded-md p-2 transition-colors',
-                activeTool === mode
-                  ? 'bg-blue-500/20 text-blue-400'
-                  : 'text-neutral-400 hover:bg-white/10 hover:text-white',
-              )}
+              className={toolBtnClass(activeTool === mode)}
             >
-              <Icon size={isMobile ? 20 : 18} />
+              <Icon size={iconSize} />
             </button>
           </TooltipTrigger>
           <TooltipContent side={isMobile ? 'top' : 'right'}>
@@ -136,34 +147,28 @@ export function Toolbar() {
         </Tooltip>
       ))}
 
-      <div
-        className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')}
-      />
+      <div className={cn(isMobile ? 'h-5 w-px bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
-            onClick={handleAddImage}
-            className="flex shrink-0 items-center justify-center rounded-md p-2 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <ImagePlus size={18} />
+          <button onClick={handleAddImage} className={actionBtnClass}>
+            <ImagePlus size={iconSize} />
           </button>
         </TooltipTrigger>
         <TooltipContent side={isMobile ? 'top' : 'right'}>Add Image</TooltipContent>
       </Tooltip>
 
+      {!isMobile && (
+        <span className="mt-1 text-[9px] font-medium tracking-wider text-neutral-500">DRAW</span>
+      )}
+
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             onClick={() => setActiveTool('draw-rectangle')}
-            className={cn(
-              'flex shrink-0 items-center justify-center rounded-md p-2 transition-colors',
-              activeTool === 'draw-rectangle'
-                ? 'bg-blue-500/20 text-blue-400'
-                : 'text-neutral-400 hover:bg-white/10 hover:text-white',
-            )}
+            className={toolBtnClass(activeTool === 'draw-rectangle')}
           >
-            <Square size={18} />
+            <Square size={iconSize} />
           </button>
         </TooltipTrigger>
         <TooltipContent side={isMobile ? 'top' : 'right'}>Rectangle (R)</TooltipContent>
@@ -173,14 +178,9 @@ export function Toolbar() {
         <TooltipTrigger asChild>
           <button
             onClick={() => setActiveTool('draw-ellipse')}
-            className={cn(
-              'flex shrink-0 items-center justify-center rounded-md p-2 transition-colors',
-              activeTool === 'draw-ellipse'
-                ? 'bg-blue-500/20 text-blue-400'
-                : 'text-neutral-400 hover:bg-white/10 hover:text-white',
-            )}
+            className={toolBtnClass(activeTool === 'draw-ellipse')}
           >
-            <Circle size={18} />
+            <Circle size={iconSize} />
           </button>
         </TooltipTrigger>
         <TooltipContent side={isMobile ? 'top' : 'right'}>Ellipse (E)</TooltipContent>
@@ -190,30 +190,20 @@ export function Toolbar() {
         <TooltipTrigger asChild>
           <button
             onClick={() => setActiveTool('draw-text')}
-            className={cn(
-              'flex shrink-0 items-center justify-center rounded-md p-2 transition-colors',
-              activeTool === 'draw-text'
-                ? 'bg-blue-500/20 text-blue-400'
-                : 'text-neutral-400 hover:bg-white/10 hover:text-white',
-            )}
+            className={toolBtnClass(activeTool === 'draw-text')}
           >
-            <Type size={18} />
+            <Type size={iconSize} />
           </button>
         </TooltipTrigger>
         <TooltipContent side={isMobile ? 'top' : 'right'}>Text (T)</TooltipContent>
       </Tooltip>
 
-      <div
-        className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')}
-      />
+      <div className={cn(isMobile ? 'h-5 w-px bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
-            onClick={handleSave}
-            className="flex shrink-0 items-center justify-center rounded-md p-2 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <Save size={18} />
+          <button onClick={handleSave} className={actionBtnClass}>
+            <Save size={iconSize} />
           </button>
         </TooltipTrigger>
         <TooltipContent side={isMobile ? 'top' : 'right'}>Save Project</TooltipContent>
@@ -221,28 +211,23 @@ export function Toolbar() {
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
-            onClick={handleOpen}
-            className="flex shrink-0 items-center justify-center rounded-md p-2 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <FolderOpen size={18} />
+          <button onClick={handleOpen} className={actionBtnClass}>
+            <FolderOpen size={iconSize} />
           </button>
         </TooltipTrigger>
         <TooltipContent side={isMobile ? 'top' : 'right'}>Open Project</TooltipContent>
       </Tooltip>
 
-      <div
-        className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')}
-      />
+      <div className={cn(isMobile ? 'h-5 w-px bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
 
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             onClick={() => undo()}
             disabled={undoStack.length === 0}
-            className="flex shrink-0 items-center justify-center rounded-md p-2 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-25"
+            className={cn(actionBtnClass, 'disabled:pointer-events-none disabled:opacity-25')}
           >
-            <Undo2 size={18} />
+            <Undo2 size={iconSize} />
           </button>
         </TooltipTrigger>
         <TooltipContent side={isMobile ? 'top' : 'right'}>Undo (Ctrl+Z)</TooltipContent>
@@ -253,25 +238,20 @@ export function Toolbar() {
           <button
             onClick={() => redo()}
             disabled={redoStack.length === 0}
-            className="flex shrink-0 items-center justify-center rounded-md p-2 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-25"
+            className={cn(actionBtnClass, 'disabled:pointer-events-none disabled:opacity-25')}
           >
-            <Redo2 size={18} />
+            <Redo2 size={iconSize} />
           </button>
         </TooltipTrigger>
         <TooltipContent side={isMobile ? 'top' : 'right'}>Redo (Ctrl+Shift+Z)</TooltipContent>
       </Tooltip>
 
-      <div
-        className={cn(isMobile ? 'h-5 w-px shrink-0 bg-white/15' : 'mx-1 h-px w-full bg-white/15')}
-      />
+      <div className={cn(isMobile ? 'h-5 w-px bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
-            onClick={() => setCanvasSizeOpen(true)}
-            className="flex shrink-0 items-center justify-center rounded-md p-2 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <Frame size={18} />
+          <button onClick={() => setCanvasSizeOpen(true)} className={actionBtnClass}>
+            <Frame size={iconSize} />
           </button>
         </TooltipTrigger>
         <TooltipContent side={isMobile ? 'top' : 'right'}>Canvas Size</TooltipContent>
@@ -279,11 +259,8 @@ export function Toolbar() {
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
-            onClick={() => setExportOpen(true)}
-            className="flex shrink-0 items-center justify-center rounded-md p-2 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <Download size={18} />
+          <button onClick={() => setExportOpen(true)} className={actionBtnClass}>
+            <Download size={iconSize} />
           </button>
         </TooltipTrigger>
         <TooltipContent side={isMobile ? 'top' : 'right'}>Export</TooltipContent>
@@ -309,13 +286,7 @@ export function Toolbar() {
   if (isMobile) {
     return (
       <>
-        <div
-          className="scrollbar-none absolute right-4 bottom-4 left-4 z-50 flex items-center gap-1 overflow-x-auto rounded-full border border-white/15 bg-neutral-900/90 px-2 py-1.5 backdrop-blur-md"
-          style={{
-            paddingBottom: 'calc(0.375rem + env(safe-area-inset-bottom, 0px))',
-            marginBottom: 'env(safe-area-inset-bottom, 0px)',
-          }}
-        >
+        <div className="absolute bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/15 bg-neutral-900/90 px-2 py-1.5 backdrop-blur-md">
           {buttons}
         </div>
         {dialogs}
