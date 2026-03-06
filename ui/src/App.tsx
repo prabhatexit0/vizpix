@@ -6,6 +6,7 @@ import { loadVpd } from '@/lib/vpd'
 
 function App() {
   const initWasm = useEditorStore((s) => s.initWasm)
+  const wasmReady = useEditorStore((s) => s.wasmReady)
   const setDocumentSize = useEditorStore((s) => s.setDocumentSize)
   const setDocumentBackground = useEditorStore((s) => s.setDocumentBackground)
   const fitToDocument = useEditorStore((s) => s.fitToDocument)
@@ -61,6 +62,17 @@ function App() {
     }
     input.click()
   }, [loadDocument, fitToDocument])
+
+  if (!wasmReady) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-neutral-950 text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-neutral-700 border-t-blue-500" />
+          <p className="text-sm text-neutral-400">Loading engine…</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!showEditor) {
     return <CanvasSizePage onApply={handleCanvasApply} onOpenProject={handleOpenProject} />
