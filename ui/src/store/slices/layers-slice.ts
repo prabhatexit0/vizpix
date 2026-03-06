@@ -269,7 +269,7 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
       textAlign: 'left',
       lineHeight: 1.4,
       letterSpacing: 0,
-      boxWidth: rect ? Math.abs(rect.width) : null,
+      boxWidth: rect && rect.width ? Math.abs(rect.width) : null,
       boxHeight: 'auto',
       visible: true,
       opacity: 1,

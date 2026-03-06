@@ -236,14 +236,24 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
 
         const hitId = hitTestLayers(wx, wy)
 
-        // Double-click detection for text editing
+        // Double-click detection
         const now = Date.now()
         const last = lastClickRef.current
-        if (hitId && hitId === last.layerId && now - last.time < 400) {
-          const store = useEditorStore.getState()
-          const layer = findLayerById(store.layers, hitId)
-          if (layer?.type === 'text') {
-            store.setEditingTextLayerId(hitId)
+        if (now - last.time < 400) {
+          if (hitId && hitId === last.layerId) {
+            const store = useEditorStore.getState()
+            const layer = findLayerById(store.layers, hitId)
+            if (layer?.type === 'text') {
+              store.setEditingTextLayerId(hitId)
+              lastClickRef.current = { time: 0, layerId: null }
+              ptr.down = false
+              return
+            }
+          } else if (!hitId && last.layerId === null) {
+            // Double-click on empty canvas → create text layer at click point
+            const store = useEditorStore.getState()
+            store.addTextLayer({ x: wx, y: wy, width: 0, height: 0 })
+            useEditorStore.setState({ activeTool: 'pointer' })
             lastClickRef.current = { time: 0, layerId: null }
             ptr.down = false
             return
