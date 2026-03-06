@@ -7,6 +7,7 @@ import { TransformHandles } from './transform-handles'
 import { CropOverlay } from './crop-overlay'
 import { DrawPreviewOverlay } from './draw-preview-overlay'
 import { InlineTextEditor } from './inline-text-editor'
+import { SelectionOutline } from './selection-outline'
 
 export function EditorCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -113,6 +114,9 @@ export function EditorCanvas() {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       />
+      {activeLayerId && (
+        <SelectionOutline canvasRef={canvasRef} layerId={activeLayerId} viewport={viewport} />
+      )}
       {activeLayerId && activeTool === 'pointer' && (
         <TransformHandles canvasRef={canvasRef} layerId={activeLayerId} viewport={viewport} />
       )}
