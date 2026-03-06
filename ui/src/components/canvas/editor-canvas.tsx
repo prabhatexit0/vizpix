@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from 'react'
+import { Grid2X2 } from 'lucide-react'
 import { useEditorStore } from '@/store'
 import { useCanvasCompositor } from '@/hooks/use-canvas-compositor'
 import { useCanvasInteractions } from '@/hooks/use-canvas-interactions'
@@ -59,6 +60,8 @@ export function EditorCanvas() {
   const activeLayerId = useEditorStore((s) => s.activeLayerId)
   const activeTool = useEditorStore((s) => s.activeTool)
   const editingTextLayerId = useEditorStore((s) => s.editingTextLayerId)
+  const canvasBg = useEditorStore((s) => s.canvasBg)
+  const cycleCanvasBg = useEditorStore((s) => s.cycleCanvasBg)
 
   // Force re-render when fonts finish loading so text layers use the correct font
   const [, setFontsLoaded] = useState(false)
@@ -161,6 +164,14 @@ export function EditorCanvas() {
       {editingTextLayerId && (
         <InlineTextEditor canvasRef={canvasRef} layerId={editingTextLayerId} viewport={viewport} />
       )}
+      <button
+        onClick={cycleCanvasBg}
+        className="absolute right-2 bottom-2 z-10 flex items-center gap-1.5 rounded-md bg-neutral-900/80 px-2 py-1 text-xs text-neutral-400 backdrop-blur-sm transition-colors hover:text-white"
+        title="Toggle canvas background"
+      >
+        <Grid2X2 size={12} />
+        <span className="capitalize">{canvasBg === 'checkerboard' ? 'Check' : canvasBg}</span>
+      </button>
     </div>
   )
 }

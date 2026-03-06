@@ -1,5 +1,7 @@
 import type { StateCreator } from 'zustand'
-import type { EditorState, ViewportSlice } from '../types'
+import type { CanvasBg, EditorState, ViewportSlice } from '../types'
+
+const BG_CYCLE: CanvasBg[] = ['checkerboard', 'gray', 'black']
 import { ZOOM_MIN, ZOOM_MAX } from '@/lib/constants'
 
 const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z))
@@ -13,6 +15,13 @@ export const createViewportSlice: StateCreator<EditorState, [], [], ViewportSlic
 ) => ({
   viewport: { panX: 0, panY: 0, zoom: 1 },
   viewportTarget: null,
+  canvasBg: 'checkerboard',
+
+  cycleCanvasBg: () =>
+    set((s) => {
+      const idx = BG_CYCLE.indexOf(s.canvasBg)
+      return { canvasBg: BG_CYCLE[(idx + 1) % BG_CYCLE.length] }
+    }),
 
   pan: (dx, dy) =>
     set((s) => ({

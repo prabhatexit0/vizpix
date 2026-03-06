@@ -227,15 +227,19 @@ export interface LayersSlice {
   invertLayerMask: (layerId: string) => void
 }
 
+export type CanvasBg = 'checkerboard' | 'gray' | 'black'
+
 export interface ViewportSlice {
   viewport: Viewport
   viewportTarget: Viewport | null
+  canvasBg: CanvasBg
   pan: (dx: number, dy: number) => void
   zoom: (factor: number, centerX?: number, centerY?: number) => void
   setZoom: (zoom: number) => void
   resetViewport: () => void
   fitToDocument: (canvasWidth: number, canvasHeight: number) => void
   tickViewportAnimation: () => boolean
+  cycleCanvasBg: () => void
 }
 
 export interface ToolsSlice {

@@ -10,7 +10,7 @@ export function useCanvasCompositor() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const { layers, viewport } = useEditorStore.getState()
+    const { layers, viewport, canvasBg } = useEditorStore.getState()
     const dpr = window.devicePixelRatio || 1
     const w = canvas.width / dpr
     const h = canvas.height / dpr
@@ -18,12 +18,17 @@ export function useCanvasCompositor() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
 
-    // checkerboard bg
-    if (!patternRef.current) {
-      patternRef.current = createCheckerboardPattern(ctx)
-    }
-    if (patternRef.current) {
-      ctx.fillStyle = patternRef.current
+    // canvas background
+    if (canvasBg === 'checkerboard') {
+      if (!patternRef.current) {
+        patternRef.current = createCheckerboardPattern(ctx)
+      }
+      if (patternRef.current) {
+        ctx.fillStyle = patternRef.current
+        ctx.fillRect(0, 0, w, h)
+      }
+    } else {
+      ctx.fillStyle = canvasBg === 'gray' ? '#808080' : '#000000'
       ctx.fillRect(0, 0, w, h)
     }
 
