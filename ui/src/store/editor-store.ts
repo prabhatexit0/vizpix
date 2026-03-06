@@ -15,3 +15,19 @@ export const useEditorStore = create<EditorState>()((...a) => ({
   ...createWasmSlice(...a),
   ...createDocumentSlice(...a),
 }))
+
+// Auto-switch panel on layer selection changes
+let prevActiveLayerId: string | null = null
+useEditorStore.subscribe((state) => {
+  const { activeLayerId, setActivePanel } = state
+  if (activeLayerId === prevActiveLayerId) return
+  const wasNull = prevActiveLayerId === null
+  prevActiveLayerId = activeLayerId
+
+  if (activeLayerId !== null && wasNull) {
+    setActivePanel('properties')
+  } else if (activeLayerId === null) {
+    setActivePanel('layers')
+  }
+  // When switching between layers, don't force panel change (respect user's tab choice)
+})
