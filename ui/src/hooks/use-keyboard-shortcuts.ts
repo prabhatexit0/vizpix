@@ -89,6 +89,16 @@ export function useKeyboardShortcuts(
         }
       }
 
+      // Enter: start text editing on selected text layer
+      if (e.key === 'Enter' && !store.editingTextLayerId && store.activeLayerId) {
+        const layer = findLayerById(store.layers, store.activeLayerId)
+        if (layer?.type === 'text') {
+          e.preventDefault()
+          store.setEditingTextLayerId(store.activeLayerId)
+          return
+        }
+      }
+
       // Temp hand (space)
       if (e.key === ' ' && !e.repeat) {
         e.preventDefault()
