@@ -168,7 +168,7 @@ export interface LayersSlice {
   setOpacity: (id: string, opacity: number) => void
   setBlendMode: (id: string, mode: BlendMode) => void
   setTransform: (id: string, transform: Partial<LayerTransform>) => void
-  reorderLayers: (fromIndex: number, toIndex: number) => void
+  reorderLayers: (layerId: string, toIndex: number, toParentId?: string | null) => void
   renameLayer: (id: string, name: string) => void
   duplicateLayer: (id: string) => void
   toggleLock: (id: string) => void

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store'
 import type { Layer, ToolMode } from '@/store/types'
-import { findLayerById } from '@/lib/layer-utils'
+import { findLayerById, findLayerParent } from '@/lib/layer-utils'
 
 let clipboardLayer: Layer | null = null
 
@@ -164,9 +164,13 @@ export function useKeyboardShortcuts(
 
       if (e.key === ']' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (store.activeLayerId) {
-          const idx = store.layers.findIndex((l) => l.id === store.activeLayerId)
-          if (idx < store.layers.length - 1) {
-            store.reorderLayers(idx, idx + 1)
+          const parentInfo = findLayerParent(store.layers, store.activeLayerId)
+          if (parentInfo && parentInfo.index < parentInfo.parent.length - 1) {
+            const parentGroup =
+              parentInfo.parent === store.layers
+                ? null
+                : store.layers.find((l) => l.type === 'group' && l.children === parentInfo.parent)
+            store.reorderLayers(store.activeLayerId, parentInfo.index + 1, parentGroup?.id ?? null)
           }
         }
         return
@@ -174,9 +178,13 @@ export function useKeyboardShortcuts(
 
       if (e.key === '[' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (store.activeLayerId) {
-          const idx = store.layers.findIndex((l) => l.id === store.activeLayerId)
-          if (idx > 0) {
-            store.reorderLayers(idx, idx - 1)
+          const parentInfo = findLayerParent(store.layers, store.activeLayerId)
+          if (parentInfo && parentInfo.index > 0) {
+            const parentGroup =
+              parentInfo.parent === store.layers
+                ? null
+                : store.layers.find((l) => l.type === 'group' && l.children === parentInfo.parent)
+            store.reorderLayers(store.activeLayerId, parentInfo.index - 1, parentGroup?.id ?? null)
           }
         }
         return

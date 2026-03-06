@@ -85,12 +85,25 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
     }))
   },
 
-  reorderLayers: (fromIndex, toIndex) => {
+  reorderLayers: (layerId, toIndex, toParentId) => {
     get().pushSnapshot()
     set((s) => {
-      const layers = [...s.layers]
-      const [moved] = layers.splice(fromIndex, 1)
-      layers.splice(toIndex, 0, moved)
+      const layer = findLayerById(s.layers, layerId)
+      if (!layer) return s
+      let layers = removeLayerFromTree(s.layers, layerId)
+
+      if (toParentId) {
+        layers = updateLayerInTree(layers, toParentId, (g) => {
+          if (g.type !== 'group') return g
+          const children = [...g.children]
+          children.splice(toIndex, 0, layer)
+          return { ...g, children }
+        })
+      } else {
+        layers = [...layers]
+        layers.splice(toIndex, 0, layer)
+      }
+
       return { layers }
     })
   },
