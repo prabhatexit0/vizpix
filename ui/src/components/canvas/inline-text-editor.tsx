@@ -11,9 +11,9 @@ import {
 } from '@/lib/layer-utils'
 import {
   getFormattingAtSelection,
-  splitRunsAtIndex,
-  mergeAdjacentRuns,
   getPlainText,
+  insertTextAtCursor,
+  deleteTextAtRange,
 } from '@/lib/rich-text-utils'
 import { setTextCursorClickCallback } from '@/hooks/use-canvas-interactions'
 import { TextFormatToolbar } from './text-format-toolbar'
@@ -29,7 +29,6 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     const found = findLayerById(s.layers, layerId)
     return found?.type === 'text' ? found : null
   })
-  const updateTextProperties = useEditorStore((s) => s.updateTextProperties)
   const setEditingTextLayerId = useEditorStore((s) => s.setEditingTextLayerId)
   const setTextSelection = useEditorStore((s) => s.setTextSelection)
   const pushSnapshot = useEditorStore((s) => s.pushSnapshot)
@@ -134,34 +133,56 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
 
     const newContent = ta.value
     const newCursor = ta.selectionStart ?? 0
+    const oldContent = layer.content
+    const oldRuns = layer.runs
 
-    if (pendingFormat && newContent.length > layer.content.length) {
-      // Characters were inserted with pending formatting
-      const insertedLen = newContent.length - layer.content.length
+    let newRuns: TextRun[]
+    const sel = useEditorStore.getState().textSelection
+    const hadSelection = sel && sel.start !== sel.end
+
+    if (newContent === oldContent) {
+      newRuns = oldRuns
+    } else if (hadSelection) {
+      // Selection was replaced (or deleted)
+      const selStart = Math.min(sel.start, sel.end)
+      const selEnd = Math.max(sel.start, sel.end)
+      const deleted = deleteTextAtRange(oldRuns, selStart, selEnd)
+      const insertedText = newContent.slice(selStart, newCursor)
+      if (insertedText.length > 0) {
+        newRuns = insertTextAtCursor(deleted, selStart, insertedText, pendingFormat)
+      } else {
+        newRuns = deleted
+      }
+      if (pendingFormat) setPendingFormat(null)
+    } else if (newContent.length > oldContent.length) {
+      // Text was inserted (no selection)
+      const insertedLen = newContent.length - oldContent.length
       const insertPos = newCursor - insertedLen
       const insertedText = newContent.slice(insertPos, newCursor)
-      const [before, after] = splitRunsAtIndex(layer.runs, insertPos)
-      const newRun: TextRun = { ...pendingFormat, text: insertedText }
-      const newRuns = mergeAdjacentRuns([...before, newRun, ...after])
-      const { layers } = useEditorStore.getState()
-      useEditorStore.setState({
-        layers: updateLayerInTree(layers, layerId, (l) => {
-          if (l.type !== 'text') return l
-          return { ...l, runs: newRuns, content: getPlainText(newRuns) }
-        }),
-      })
-      setPendingFormat(null)
-    } else {
-      updateTextProperties(layerId, { content: newContent })
+      newRuns = insertTextAtCursor(oldRuns, insertPos, insertedText, pendingFormat)
       if (pendingFormat) setPendingFormat(null)
+    } else {
+      // Text was deleted (backspace/delete, no selection)
+      const deletedLen = oldContent.length - newContent.length
+      const deleteStart = newCursor
+      const deleteEnd = deleteStart + deletedLen
+      newRuns = deleteTextAtRange(oldRuns, deleteStart, deleteEnd)
     }
+
+    const { layers } = useEditorStore.getState()
+    useEditorStore.setState({
+      layers: updateLayerInTree(layers, layerId, (l) => {
+        if (l.type !== 'text') return l
+        return { ...l, runs: newRuns, content: getPlainText(newRuns) }
+      }),
+    })
 
     const start = ta.selectionStart ?? 0
     const end = ta.selectionEnd ?? start
     setCursorIndex(start)
     setSelectionEnd(end)
     setTextSelection({ start, end })
-  }, [layer, layerId, updateTextProperties, pushSnapshot, setTextSelection, pendingFormat])
+  }, [layer, layerId, pushSnapshot, setTextSelection, pendingFormat])
 
   const onSelect = useCallback(() => {
     const ta = textareaRef.current

@@ -251,6 +251,81 @@ export function getFormattingAtSelection(
   return result
 }
 
+export function insertTextAtCursor(
+  runs: TextRun[],
+  index: number,
+  text: string,
+  pendingFormat?: Partial<Omit<TextRun, 'text'>> | null,
+): TextRun[] {
+  if (text.length === 0) return runs
+
+  if (pendingFormat) {
+    const [before, after] = splitRunsAtIndex(runs, index)
+    const newRun: TextRun = { ...pendingFormat, text }
+    return mergeAdjacentRuns([...before, newRun, ...after])
+  }
+
+  // Insert into the run at cursor position (left run at boundary, matching Figma)
+  let offset = 0
+  const result: TextRun[] = []
+  let inserted = false
+
+  for (let i = 0; i < runs.length; i++) {
+    const run = runs[i]
+    const runEnd = offset + run.text.length
+
+    if (!inserted && index <= runEnd && index >= offset) {
+      // Insert into this run
+      const pos = index - offset
+      result.push({ ...run, text: run.text.slice(0, pos) + text + run.text.slice(pos) })
+      inserted = true
+    } else {
+      result.push({ ...run })
+    }
+    offset = runEnd
+  }
+
+  // If cursor is past all runs (e.g., empty runs array), append
+  if (!inserted) {
+    if (result.length > 0) {
+      const last = result[result.length - 1]
+      last.text += text
+    } else {
+      result.push({ text })
+    }
+  }
+
+  return result
+}
+
+export function deleteTextAtRange(runs: TextRun[], start: number, end: number): TextRun[] {
+  if (start >= end) return runs
+
+  const result: TextRun[] = []
+  let offset = 0
+
+  for (const run of runs) {
+    const runStart = offset
+    const runEnd = offset + run.text.length
+    offset = runEnd
+
+    if (runEnd <= start || runStart >= end) {
+      // Entirely outside deletion range
+      result.push({ ...run })
+    } else {
+      // Partially or fully inside deletion range
+      const keepBefore = run.text.slice(0, Math.max(0, start - runStart))
+      const keepAfter = run.text.slice(Math.min(run.text.length, end - runStart))
+      const remaining = keepBefore + keepAfter
+      if (remaining.length > 0) {
+        result.push({ ...run, text: remaining })
+      }
+    }
+  }
+
+  return mergeAdjacentRuns(result)
+}
+
 export interface RunSegment {
   run: TextRun
   text: string
