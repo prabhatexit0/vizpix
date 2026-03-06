@@ -36,11 +36,13 @@ function ExportForm({ onClose }: { onClose: () => void }) {
   const [quality, setQuality] = useState(90)
   const [filename, setFilename] = useState('vizpix-export')
   const [exporting, setExporting] = useState(false)
+  const [fallbackWarning, setFallbackWarning] = useState(false)
 
   const handleExport = async () => {
     setExporting(true)
+    setFallbackWarning(false)
     try {
-      await exportCanvas({
+      const result = await exportCanvas({
         format,
         quality,
         filename,
@@ -49,7 +51,11 @@ function ExportForm({ onClose }: { onClose: () => void }) {
         background: documentBackground,
         layers,
       })
-      onClose()
+      if (result.usedFallback) {
+        setFallbackWarning(true)
+      } else {
+        onClose()
+      }
     } finally {
       setExporting(false)
     }
@@ -102,6 +108,13 @@ function ExportForm({ onClose }: { onClose: () => void }) {
         <span className="font-medium text-neutral-300">Dimensions: </span>
         {documentWidth} &times; {documentHeight} px
       </div>
+
+      {/* Fallback warning */}
+      {fallbackWarning && (
+        <div className="rounded-md border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-400">
+          Export used fallback renderer. Some blend modes and masks may look different.
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex justify-end gap-2">

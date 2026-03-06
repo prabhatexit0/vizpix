@@ -166,10 +166,17 @@ async function exportCanvasCanvas2D(options: ExportOptions): Promise<void> {
   URL.revokeObjectURL(url)
 }
 
-export async function exportCanvas(options: ExportOptions): Promise<void> {
+export interface ExportResult {
+  usedFallback: boolean
+}
+
+export async function exportCanvas(options: ExportOptions): Promise<ExportResult> {
   try {
     await exportCanvasWasm(options)
-  } catch {
+    return { usedFallback: false }
+  } catch (err) {
+    console.warn('WASM export failed, using Canvas2D fallback:', err)
     await exportCanvasCanvas2D(options)
+    return { usedFallback: true }
   }
 }
