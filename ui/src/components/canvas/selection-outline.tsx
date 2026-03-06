@@ -59,8 +59,8 @@ export function SelectionOutline({ canvasRef, layerId, viewport }: SelectionOutl
         points={corners.map((c) => `${c.x},${c.y}`).join(' ')}
         fill="none"
         stroke="#3b82f6"
-        strokeWidth={1}
-        opacity={0.6}
+        strokeWidth={1.5}
+        opacity={0.8}
         pointerEvents="none"
       />
     </svg>

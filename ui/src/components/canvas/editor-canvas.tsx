@@ -145,7 +145,7 @@ export function EditorCanvas() {
         }}
         onPointerUp={onPointerUp}
       />
-      {activeLayerId && (
+      {activeLayerId && !editingTextLayerId && (
         <SelectionOutline canvasRef={canvasRef} layerId={activeLayerId} viewport={viewport} />
       )}
       {activeLayerId && activeTool === 'pointer' && !editingTextLayerId && (
