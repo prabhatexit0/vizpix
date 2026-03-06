@@ -16,6 +16,7 @@ import {
   deleteTextAtRange,
 } from '@/lib/rich-text-utils'
 import { setTextCursorClickCallback } from '@/hooks/use-canvas-interactions'
+import { useVirtualKeyboard } from '@/hooks/use-virtual-keyboard'
 import { TextFormatToolbar } from './text-format-toolbar'
 
 interface InlineTextEditorProps {
@@ -44,6 +45,57 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
   const [selectionEnd, setSelectionEnd] = useState(initialContent.length)
   const [canvasRect, setCanvasRect] = useState<{ width: number; height: number } | null>(null)
   const [pendingFormat, setPendingFormat] = useState<Partial<Omit<TextRun, 'text'>> | null>(null)
+
+  const keyboardHeight = useVirtualKeyboard()
+  const savedPanYRef = useRef<number | null>(null)
+  const isTouchDevice = typeof window !== 'undefined' && 'ontouchstart' in window
+
+  // On mobile, position textarea near the text layer so iOS shows keyboard correctly
+  const textareaScreenPos = useMemo((): { x: number; y: number } | null => {
+    if (!isTouchDevice || !layer || !canvasRect) return null
+    const cx = canvasRect.width / 2 + viewport.panX
+    const cy = canvasRect.height / 2 + viewport.panY
+    const screenX = cx + layer.transform.x * viewport.zoom
+    const screenY = cy + layer.transform.y * viewport.zoom
+    return { x: Math.max(0, screenX), y: Math.max(0, screenY) }
+  }, [isTouchDevice, layer, canvasRect, viewport])
+
+  // Pan canvas to keep text visible above the virtual keyboard
+  useEffect(() => {
+    if (!isTouchDevice || !layer || !canvasRect) return
+
+    if (keyboardHeight > 0) {
+      const cx = canvasRect.height / 2 + viewport.panY
+      const textScreenY = cx + layer.transform.y * viewport.zoom
+      const visibleBottom = window.innerHeight - keyboardHeight - 80
+
+      if (textScreenY > visibleBottom) {
+        if (savedPanYRef.current === null) {
+          savedPanYRef.current = viewport.panY
+        }
+        const delta = textScreenY - visibleBottom
+        useEditorStore.getState().pan(0, delta)
+      }
+    } else if (savedPanYRef.current !== null) {
+      // Keyboard closed — restore original pan
+      const currentPanY = useEditorStore.getState().viewport.panY
+      const restoreDelta = savedPanYRef.current - currentPanY
+      useEditorStore.getState().pan(0, restoreDelta)
+      savedPanYRef.current = null
+    }
+  }, [isTouchDevice, keyboardHeight]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Restore pan on unmount if keyboard was open
+  useEffect(() => {
+    return () => {
+      if (savedPanYRef.current !== null) {
+        const currentPanY = useEditorStore.getState().viewport.panY
+        const restoreDelta = savedPanYRef.current - currentPanY
+        useEditorStore.getState().pan(0, restoreDelta)
+        savedPanYRef.current = null
+      }
+    }
+  }, [])
 
   // Track canvas size
   useEffect(() => {
@@ -409,10 +461,12 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
         onBlur={onBlur}
         onKeyDown={onKeyDown}
         spellCheck={false}
+        autoCapitalize="off"
+        autoCorrect="off"
         style={{
           position: 'fixed',
-          left: -9999,
-          top: -9999,
+          left: textareaScreenPos ? textareaScreenPos.x : -9999,
+          top: textareaScreenPos ? textareaScreenPos.y : -9999,
           width: 1,
           height: 1,
           opacity: 0,

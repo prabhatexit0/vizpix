@@ -19,6 +19,7 @@ import {
 import { Popover as PopoverPrimitive } from 'radix-ui'
 import { useEditorStore } from '@/store'
 import { useResponsive } from '@/hooks/use-responsive'
+import { useVirtualKeyboard } from '@/hooks/use-virtual-keyboard'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { ToolMode } from '@/store/types'
@@ -49,6 +50,7 @@ export function Toolbar() {
   const loadDocument = useEditorStore((s) => s.loadDocument)
   const fitToDocument = useEditorStore((s) => s.fitToDocument)
   const { isDesktop } = useResponsive()
+  const keyboardHeight = useVirtualKeyboard()
   const [canvasSizeOpen, setCanvasSizeOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -302,7 +304,10 @@ export function Toolbar() {
   if (!isDesktop) {
     return (
       <>
-        <div className="absolute bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/15 bg-neutral-900/90 px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+        <div
+          className="absolute left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/15 bg-neutral-900/90 px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md transition-[bottom] duration-200"
+          style={{ bottom: keyboardHeight > 0 ? keyboardHeight + 8 : 16 }}
+        >
           <button
             onClick={() => setActiveTool('pointer')}
             className={toolBtnClass(activeTool === 'pointer', true)}

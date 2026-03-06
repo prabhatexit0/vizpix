@@ -3,6 +3,7 @@ import { useEditorStore } from '@/store'
 import type { TextLayer, FontWeight, Viewport } from '@/store/types'
 import { measureCursorPosition } from '@/lib/layer-utils'
 import { getFormattingAtSelection } from '@/lib/rich-text-utils'
+import { useVirtualKeyboard } from '@/hooks/use-virtual-keyboard'
 import { Bold, Italic, Minus, Plus } from 'lucide-react'
 
 interface TextFormatToolbarProps {
@@ -24,6 +25,7 @@ export function TextFormatToolbar({
   const pushSnapshot = useEditorStore((s) => s.pushSnapshot)
   const colorInputRef = useRef<HTMLInputElement>(null)
   const [colorPickerOpen, setColorPickerOpen] = useState(false)
+  const keyboardHeight = useVirtualKeyboard()
 
   const start = Math.min(selectionStart, selectionEnd)
   const end = Math.max(selectionStart, selectionEnd)
@@ -98,7 +100,9 @@ export function TextFormatToolbar({
     e.stopPropagation()
   }
 
-  const toolbarY = position.y - 40
+  // Clamp toolbar above the virtual keyboard if present
+  const maxY = keyboardHeight > 0 ? window.innerHeight - keyboardHeight - 48 : Infinity
+  const toolbarY = Math.min(position.y - 40, maxY)
   const toolbarX = position.x
 
   return (
