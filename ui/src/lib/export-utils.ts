@@ -174,7 +174,7 @@ async function exportCanvasCanvas2D(options: ExportOptions): Promise<void> {
   ctx.translate(width / 2, height / 2)
 
   for (const layer of layers) {
-    renderLayerToContext(ctx, layer, width, height)
+    renderLayerToContext(ctx, layer, width, height, true)
   }
 
   const mimeType = format === 'png' ? 'image/png' : 'image/jpeg'

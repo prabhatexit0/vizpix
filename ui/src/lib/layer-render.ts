@@ -7,12 +7,13 @@ export function renderLayerToContext(
   layer: Layer,
   docWidth: number,
   docHeight: number,
+  isExport = false,
 ): void {
   if (!layer.visible) return
 
   // If layer has a mask, render via temp canvas
   if (layer.mask?.imageBitmap) {
-    renderWithMask(ctx, layer, docWidth, docHeight)
+    renderWithMask(ctx, layer, docWidth, docHeight, isExport)
     return
   }
 
@@ -33,10 +34,10 @@ export function renderLayerToContext(
       renderShapeLayer(ctx, layer)
       break
     case 'text':
-      renderTextLayer(ctx, layer)
+      renderTextLayer(ctx, layer, isExport)
       break
     case 'group':
-      renderGroupLayer(ctx, layer, docWidth, docHeight)
+      renderGroupLayer(ctx, layer, docWidth, docHeight, isExport)
       break
   }
 
@@ -48,6 +49,7 @@ function renderWithMask(
   layer: Layer,
   docWidth: number,
   docHeight: number,
+  isExport = false,
 ): void {
   const mask = layer.mask!
   const temp = new OffscreenCanvas(docWidth, docHeight)
@@ -69,7 +71,7 @@ function renderWithMask(
       renderShapeLayer(tctx, layer)
       break
     case 'text':
-      renderTextLayer(tctx, layer)
+      renderTextLayer(tctx, layer, isExport)
       break
     case 'group':
       // Reset transform for group children since they manage their own
@@ -77,7 +79,7 @@ function renderWithMask(
       tctx.translate(x, y)
       tctx.rotate((rotation * Math.PI) / 180)
       tctx.scale(scaleX, scaleY)
-      renderGroupChildren(tctx, layer, docWidth, docHeight)
+      renderGroupChildren(tctx, layer, docWidth, docHeight, isExport)
       break
   }
 
@@ -173,6 +175,7 @@ function renderShapeLayer(
 function renderTextLayer(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   layer: TextLayer,
+  isExport = false,
 ): void {
   const {
     content,
@@ -186,6 +189,23 @@ function renderTextLayer(
     letterSpacing,
     boxWidth,
   } = layer
+
+  if (!content && !isExport) {
+    const minW = 100
+    const minH = fontSize * lineHeight
+    const fillColor = fill.type === 'solid' ? fill.color : '#888888'
+    ctx.save()
+    ctx.globalAlpha = 0.5
+    ctx.strokeStyle = fillColor
+    ctx.lineWidth = 1
+    ctx.setLineDash([4, 4])
+    ctx.strokeRect(-minW / 2, -minH / 2, minW, minH)
+    ctx.restore()
+    return
+  }
+
+  if (!content) return
+
   ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`
   ctx.textAlign = textAlign
   ctx.textBaseline = 'top'
@@ -263,10 +283,11 @@ function renderGroupLayer(
   group: GroupLayer,
   docWidth: number,
   docHeight: number,
+  isExport = false,
 ): void {
   // Passthrough optimization: if opacity 1, normal blend, no mask, render children directly
   if (group.opacity === 1 && group.blendMode === 'normal' && !group.mask) {
-    renderGroupChildren(ctx, group, docWidth, docHeight)
+    renderGroupChildren(ctx, group, docWidth, docHeight, isExport)
     return
   }
 
@@ -276,7 +297,7 @@ function renderGroupLayer(
   tctx.translate(docWidth / 2, docHeight / 2)
 
   for (const child of group.children) {
-    renderLayerToContext(tctx, child, docWidth, docHeight)
+    renderLayerToContext(tctx, child, docWidth, docHeight, isExport)
   }
 
   // If group has mask, apply it
@@ -300,9 +321,10 @@ function renderGroupChildren(
   group: GroupLayer,
   docWidth: number,
   docHeight: number,
+  isExport = false,
 ): void {
   for (const child of group.children) {
-    renderLayerToContext(ctx, child, docWidth, docHeight)
+    renderLayerToContext(ctx, child, docWidth, docHeight, isExport)
   }
 }
 

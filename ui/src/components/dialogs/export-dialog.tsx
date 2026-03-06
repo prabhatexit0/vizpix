@@ -66,7 +66,7 @@ function ExportForm({ onClose }: { onClose: () => void }) {
       ctx.scale(scale, scale)
 
       for (const layer of layers) {
-        renderLayerToContext(ctx, layer, documentWidth, documentHeight)
+        renderLayerToContext(ctx, layer, documentWidth, documentHeight, true)
       }
 
       const mimeType = format === 'png' ? 'image/png' : 'image/jpeg'

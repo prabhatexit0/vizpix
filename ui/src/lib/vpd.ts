@@ -99,7 +99,7 @@ function generateThumbnail(
   ctx.scale(scale, scale)
 
   for (const layer of layers) {
-    renderLayerToContext(ctx, layer, docWidth, docHeight)
+    renderLayerToContext(ctx, layer, docWidth, docHeight, true)
   }
 
   return canvas.convertToBlob({ type: 'image/png' }).then(async (blob) => {
