@@ -379,39 +379,35 @@ export function PropertiesPanel() {
           </div>
 
           {/* Stroke */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-                Stroke W
-              </label>
-              <Input
-                type="number"
-                value={layer.stroke.width}
-                min={0}
-                onFocus={onInputFocus}
-                onChange={(e) =>
-                  updateShapeProperties(activeLayerId, {
-                    stroke: { ...layer.stroke, width: Number(e.target.value) },
-                  })
-                }
-                className="h-8 text-xs"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-                Color
-              </label>
-              <input
-                type="color"
-                value={layer.stroke.color}
-                onChange={(e) =>
-                  updateShapeProperties(activeLayerId, {
-                    stroke: { ...layer.stroke, color: e.target.value },
-                  })
-                }
-                className="h-8 w-full cursor-pointer rounded border border-white/12 bg-transparent"
-              />
-            </div>
+          <SliderInput
+            label="Stroke W"
+            value={layer.stroke.width}
+            min={0}
+            max={50}
+            step={0.5}
+            suffix="px"
+            precision={1}
+            onValueChange={(v) =>
+              updateShapeProperties(activeLayerId, {
+                stroke: { ...layer.stroke, width: v },
+              })
+            }
+            onValueCommit={() => pushSnapshot()}
+          />
+          <div>
+            <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
+              Stroke Color
+            </label>
+            <input
+              type="color"
+              value={layer.stroke.color}
+              onChange={(e) =>
+                updateShapeProperties(activeLayerId, {
+                  stroke: { ...layer.stroke, color: e.target.value },
+                })
+              }
+              className="h-8 w-full cursor-pointer rounded border border-white/12 bg-transparent"
+            />
           </div>
 
           {/* Corner radius (rectangle only) */}
