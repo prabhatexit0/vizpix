@@ -416,21 +416,16 @@ export function PropertiesPanel() {
 
           {/* Corner radius (rectangle only) */}
           {layer.shapeType === 'rectangle' && (
-            <div>
-              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-                Corner Radius
-              </label>
-              <Input
-                type="number"
-                value={layer.cornerRadius}
-                min={0}
-                onFocus={onInputFocus}
-                onChange={(e) =>
-                  updateShapeProperties(activeLayerId, { cornerRadius: Number(e.target.value) })
-                }
-                className="h-8 text-xs"
-              />
-            </div>
+            <SliderInput
+              label="Radius"
+              value={layer.cornerRadius}
+              min={0}
+              max={Math.floor(Math.min(layer.width, layer.height) / 2)}
+              step={1}
+              suffix="px"
+              onValueChange={(v) => updateShapeProperties(activeLayerId, { cornerRadius: v })}
+              onValueCommit={() => pushSnapshot()}
+            />
           )}
         </>
       )}
