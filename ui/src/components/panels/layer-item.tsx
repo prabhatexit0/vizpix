@@ -92,26 +92,35 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
       // For empty text layers, skip rendering (icon shown via fallback)
       if (layer.type === 'text' && !layer.content) return
 
-      const dims = getLayerDimensions(layer)
-      const scale = Math.min(28 / dims.width, 28 / dims.height, 1)
-
-      ctx.save()
-
-      // Light background for text contrast
       if (layer.type === 'text') {
-        ctx.fillStyle = '#e5e5e5'
+        // Custom text thumbnail: render at readable size, clip to 32x32
+        const textColor = layer.fill.type === 'solid' ? layer.fill.color : '#000000'
+        const isLight = textColor === '#ffffff' || textColor === '#fff' || textColor === 'white'
+        ctx.fillStyle = isLight ? '#333333' : '#e5e5e5'
         ctx.fillRect(0, 0, 32, 32)
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(0, 0, 32, 32)
+        ctx.clip()
+        ctx.fillStyle = textColor
+        ctx.font = `${layer.fontWeight} 11px ${layer.fontFamily}, sans-serif`
+        ctx.textBaseline = 'middle'
+        ctx.fillText(layer.content, 2, 16)
+        ctx.restore()
+      } else {
+        const dims = getLayerDimensions(layer)
+        const scale = Math.min(28 / dims.width, 28 / dims.height, 1)
+        ctx.save()
+        ctx.translate(16, 16)
+        ctx.scale(scale, scale)
+        const tempLayer = {
+          ...layer,
+          transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+          opacity: 1,
+        }
+        renderLayerToContext(ctx, tempLayer as Layer, Math.ceil(dims.width), Math.ceil(dims.height))
+        ctx.restore()
       }
-
-      ctx.translate(16, 16)
-      ctx.scale(scale, scale)
-      const tempLayer = {
-        ...layer,
-        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
-        opacity: 1,
-      }
-      renderLayerToContext(ctx, tempLayer as Layer, Math.ceil(dims.width), Math.ceil(dims.height))
-      ctx.restore()
     }, 200)
 
     return () => {
