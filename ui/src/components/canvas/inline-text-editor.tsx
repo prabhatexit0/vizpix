@@ -1,7 +1,12 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react'
 import { useEditorStore } from '@/store'
 import type { Viewport } from '@/store/types'
-import { findLayerById, measureCursorPosition, findCursorIndexFromLocal } from '@/lib/layer-utils'
+import {
+  findLayerById,
+  measureCursorPosition,
+  findCursorIndexFromLocal,
+  getLayerDimensions,
+} from '@/lib/layer-utils'
 import { setTextCursorClickCallback } from '@/hooks/use-canvas-interactions'
 
 interface InlineTextEditorProps {
@@ -165,6 +170,37 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     }
   }, [layer, canvasRect, viewport, cursorIndex])
 
+  const boundingBox = useMemo(() => {
+    if (!layer || !canvasRect) return null
+
+    const dims = getLayerDimensions(layer)
+    const { x, y, scaleX, scaleY, rotation } = layer.transform
+    const zoom = viewport.zoom
+
+    const cx = canvasRect.width / 2 + viewport.panX
+    const cy = canvasRect.height / 2 + viewport.panY
+    const worldX = cx + x * zoom
+    const worldY = cy + y * zoom
+
+    const hw = (dims.width * scaleX * zoom) / 2
+    const hh = (dims.height * scaleY * zoom) / 2
+    const rad = (rotation * Math.PI) / 180
+    const cos = Math.cos(rad)
+    const sin = Math.sin(rad)
+
+    const corners = [
+      [-hw, -hh],
+      [hw, -hh],
+      [hw, hh],
+      [-hw, hh],
+    ].map(([px, py]) => ({
+      x: worldX + px * cos - py * sin,
+      y: worldY + px * sin + py * cos,
+    }))
+
+    return { corners, strokeWidth: 1.5 / zoom }
+  }, [layer, canvasRect, viewport])
+
   if (!layer) return null
 
   return (
@@ -187,6 +223,18 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
           pointerEvents: 'none',
         }}
       />
+      {/* Textbox bounding box */}
+      {boundingBox && (
+        <svg className="pointer-events-none absolute inset-0 h-full w-full">
+          <polygon
+            points={boundingBox.corners.map((c) => `${c.x},${c.y}`).join(' ')}
+            fill="none"
+            stroke="#3b82f6"
+            strokeWidth={boundingBox.strokeWidth}
+            strokeDasharray="6 3"
+          />
+        </svg>
+      )}
       {/* Blinking caret overlay */}
       {caretStyle && <div style={caretStyle} />}
     </>
