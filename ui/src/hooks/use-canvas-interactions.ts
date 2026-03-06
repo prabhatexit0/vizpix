@@ -98,8 +98,8 @@ function hitTestLayer(layer: Layer, wx: number, wy: number): string | null {
 
     case 'text': {
       const dims = getLayerDimensions(layer)
-      const hw = (dims.width * Math.abs(scaleX)) / 2
-      const hh = (dims.height * Math.abs(scaleY)) / 2
+      const hw = Math.max((dims.width * Math.abs(scaleX)) / 2, 50)
+      const hh = Math.max((dims.height * Math.abs(scaleY)) / 2, 15)
       // Use un-rotated but not un-scaled coords for hit test
       const rx = dx * cos - dy * sin
       const ry = dx * sin + dy * cos

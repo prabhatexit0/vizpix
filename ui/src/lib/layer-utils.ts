@@ -78,19 +78,27 @@ export function getLayerDimensions(layer: Layer): { width: number; height: numbe
   }
 }
 
+const TEXT_MIN_WIDTH = 100
+const TEXT_MIN_LINE_HEIGHT_FACTOR = 1
+
 function measureTextLayer(layer: Layer & { type: 'text' }): { width: number; height: number } {
   const canvas = new OffscreenCanvas(1, 1)
   const ctx = canvas.getContext('2d')!
   ctx.font = `${layer.fontStyle} ${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`
 
+  const lineH = layer.fontSize * layer.lineHeight
+  const minHeight = layer.fontSize * layer.lineHeight * TEXT_MIN_LINE_HEIGHT_FACTOR
+
+  if (!layer.content) {
+    return { width: TEXT_MIN_WIDTH, height: minHeight }
+  }
+
   if (layer.boxWidth !== null) {
     const lines = wrapText(ctx, layer.content, layer.boxWidth)
-    const lineH = layer.fontSize * layer.lineHeight
     return { width: layer.boxWidth, height: lines.length * lineH }
   }
 
   const lines = layer.content.split('\n')
-  const lineH = layer.fontSize * layer.lineHeight
   const maxLineWidth = Math.max(...lines.map((l) => ctx.measureText(l).width))
   return { width: Math.ceil(maxLineWidth), height: Math.ceil(lines.length * lineH) }
 }
