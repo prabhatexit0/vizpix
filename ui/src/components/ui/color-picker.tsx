@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { Popover as PopoverPrimitive } from 'radix-ui'
 
 const PRESETS = [
@@ -72,21 +72,24 @@ interface ColorPickerProps {
 
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
   const [open, setOpen] = useState(false)
-  const [hsv, setHsv] = useState<[number, number, number]>(() => hexToHsv(value))
+  const [localHsv, setLocalHsv] = useState<[number, number, number] | null>(null)
   const [hexInput, setHexInput] = useState(value)
+  const [lastPropValue, setLastPropValue] = useState(value)
   const svRef = useRef<HTMLDivElement>(null)
   const hueRef = useRef<HTMLDivElement>(null)
-  const [svDragging, setSvDragging] = useState(false)
-  const [hueDragging, setHueDragging] = useState(false)
 
-  useEffect(() => {
-    setHsv(hexToHsv(value))
+  // Sync from prop using useState (no refs during render)
+  if (lastPropValue !== value) {
+    setLastPropValue(value)
+    setLocalHsv(null)
     setHexInput(value)
-  }, [value])
+  }
 
-  const updateColor = useCallback(
+  const hsv = useMemo(() => localHsv ?? hexToHsv(value), [localHsv, value])
+
+  const updateFromHsv = useCallback(
     (h: number, s: number, v: number) => {
-      setHsv([h, s, v])
+      setLocalHsv([h, s, v])
       const hex = hsvToHex(h, s, v)
       setHexInput(hex)
       onChange(hex)
@@ -94,25 +97,25 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
     [onChange],
   )
 
-  const handleSvPointer = useCallback(
-    (e: React.PointerEvent, currentHue: number) => {
+  const applySv = useCallback(
+    (clientX: number, clientY: number, currentH: number) => {
       const rect = svRef.current?.getBoundingClientRect()
       if (!rect) return
-      const s = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
-      const v = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height))
-      updateColor(currentHue, s, v)
+      const s = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+      const v = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height))
+      updateFromHsv(currentH, s, v)
     },
-    [updateColor],
+    [updateFromHsv],
   )
 
-  const handleHuePointer = useCallback(
-    (e: React.PointerEvent, currentS: number, currentV: number) => {
+  const applyHue = useCallback(
+    (clientX: number, currentS: number, currentV: number) => {
       const rect = hueRef.current?.getBoundingClientRect()
       if (!rect) return
-      const h = Math.max(0, Math.min(360, ((e.clientX - rect.left) / rect.width) * 360))
-      updateColor(h, currentS, currentV)
+      const h = Math.max(0, Math.min(360, ((clientX - rect.left) / rect.width) * 360))
+      updateFromHsv(h, currentS, currentV)
     },
-    [updateColor],
+    [updateFromHsv],
   )
 
   const hueColor = hsvToHex(hsv[0], 1, 1)
@@ -131,59 +134,8 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
           sideOffset={4}
           align="start"
         >
-          {/* SV plane */}
-          <div
-            ref={svRef}
-            className="relative h-36 w-full cursor-crosshair rounded"
-            style={{
-              background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hueColor})`,
-            }}
-            onPointerDown={(e) => {
-              e.preventDefault()
-              ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-              setSvDragging(true)
-              handleSvPointer(e, hsv[0])
-            }}
-            onPointerMove={(e) => {
-              if (svDragging) handleSvPointer(e, hsv[0])
-            }}
-            onPointerUp={() => setSvDragging(false)}
-          >
-            <div
-              className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow"
-              style={{
-                left: `${hsv[1] * 100}%`,
-                top: `${(1 - hsv[2]) * 100}%`,
-              }}
-            />
-          </div>
-
-          {/* Hue bar */}
-          <div
-            ref={hueRef}
-            className="relative mt-2.5 h-3 w-full cursor-pointer rounded-full"
-            style={{
-              background: 'linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)',
-            }}
-            onPointerDown={(e) => {
-              e.preventDefault()
-              ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-              setHueDragging(true)
-              handleHuePointer(e, hsv[1], hsv[2])
-            }}
-            onPointerMove={(e) => {
-              if (hueDragging) handleHuePointer(e, hsv[1], hsv[2])
-            }}
-            onPointerUp={() => setHueDragging(false)}
-          >
-            <div
-              className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow"
-              style={{
-                left: `${(hsv[0] / 360) * 100}%`,
-                backgroundColor: hueColor,
-              }}
-            />
-          </div>
+          <SvPlane svRef={svRef} hueColor={hueColor} hsv={hsv} applySv={applySv} />
+          <HueBar hueRef={hueRef} hsv={hsv} hueColor={hueColor} applyHue={applyHue} />
 
           {/* Hex input */}
           <input
@@ -194,7 +146,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
               const v = e.target.value.trim()
               if (/^#[0-9a-fA-F]{6}$/.test(v)) {
                 onChange(v)
-                setHsv(hexToHsv(v))
+                setLocalHsv(hexToHsv(v))
               }
             }}
             onBlur={() => setHexInput(value)}
@@ -209,7 +161,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
                 style={{ backgroundColor: color }}
                 onClick={() => {
                   onChange(color)
-                  setHsv(hexToHsv(color))
+                  setLocalHsv(hexToHsv(color))
                   setHexInput(color)
                 }}
               />
@@ -218,5 +170,87 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
         </PopoverPrimitive.Content>
       </PopoverPrimitive.Portal>
     </PopoverPrimitive.Root>
+  )
+}
+
+function SvPlane({
+  svRef,
+  hueColor,
+  hsv,
+  applySv,
+}: {
+  svRef: React.RefObject<HTMLDivElement | null>
+  hueColor: string
+  hsv: [number, number, number]
+  applySv: (clientX: number, clientY: number, currentH: number) => void
+}) {
+  const hRef = useRef(hsv[0])
+
+  return (
+    <div
+      ref={svRef}
+      className="relative h-36 w-full cursor-crosshair rounded"
+      style={{
+        background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, ${hueColor})`,
+      }}
+      onPointerDown={(e) => {
+        e.preventDefault()
+        ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+        hRef.current = hsv[0]
+        applySv(e.clientX, e.clientY, hsv[0])
+      }}
+      onPointerMove={(e) => {
+        if (e.buttons === 1) applySv(e.clientX, e.clientY, hRef.current)
+      }}
+    >
+      <div
+        className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow"
+        style={{
+          left: `${hsv[1] * 100}%`,
+          top: `${(1 - hsv[2]) * 100}%`,
+        }}
+      />
+    </div>
+  )
+}
+
+function HueBar({
+  hueRef,
+  hsv,
+  hueColor,
+  applyHue,
+}: {
+  hueRef: React.RefObject<HTMLDivElement | null>
+  hsv: [number, number, number]
+  hueColor: string
+  applyHue: (clientX: number, currentS: number, currentV: number) => void
+}) {
+  const svSnapRef = useRef<[number, number]>([hsv[1], hsv[2]])
+
+  return (
+    <div
+      ref={hueRef}
+      className="relative mt-2.5 h-3 w-full cursor-pointer rounded-full"
+      style={{
+        background: 'linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)',
+      }}
+      onPointerDown={(e) => {
+        e.preventDefault()
+        ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+        svSnapRef.current = [hsv[1], hsv[2]]
+        applyHue(e.clientX, hsv[1], hsv[2])
+      }}
+      onPointerMove={(e) => {
+        if (e.buttons === 1) applyHue(e.clientX, svSnapRef.current[0], svSnapRef.current[1])
+      }}
+    >
+      <div
+        className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow"
+        style={{
+          left: `${(hsv[0] / 360) * 100}%`,
+          backgroundColor: hueColor,
+        }}
+      />
+    </div>
   )
 }
