@@ -14,8 +14,16 @@ export function EditorCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number>(0)
   const { composite } = useCanvasCompositor()
-  const { onPointerDown, onPointerMove, onPointerUp, onWheel, setTempHand, getDrawPreview } =
-    useCanvasInteractions(canvasRef)
+  const {
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
+    onWheel,
+    setTempHand,
+    getDrawPreview,
+    hoverCursor,
+    onHoverMove,
+  } = useCanvasInteractions(canvasRef)
   useKeyboardShortcuts(setTempHand, canvasRef)
 
   // Native non-passive wheel listener so preventDefault() actually works.
@@ -98,7 +106,7 @@ export function EditorCanvas() {
         ? 'zoom-in'
         : activeTool === 'crop' || isDrawTool
           ? 'crosshair'
-          : 'default'
+          : (hoverCursor ?? 'default')
 
   return (
     <div
@@ -111,7 +119,10 @@ export function EditorCanvas() {
         className="absolute inset-0"
         style={{ cursor, touchAction: 'none' }}
         onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
+        onPointerMove={(e) => {
+          onPointerMove(e)
+          onHoverMove(e)
+        }}
         onPointerUp={onPointerUp}
       />
       {activeLayerId && (

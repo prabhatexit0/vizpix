@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useEditorStore } from '@/store'
 import type { Layer, ToolMode } from '@/store/types'
 import { getAlphaCache } from '@/lib/hit-test-cache'
@@ -380,6 +380,37 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
     return drawPreviewRef.current
   }, [])
 
+  const [hoverCursor, setHoverCursor] = useState<string | null>(null)
+  const hoverThrottleRef = useRef(0)
+
+  const onHoverMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (ptrRef.current.down) return
+      const now = Date.now()
+      if (now - hoverThrottleRef.current < 50) return
+      hoverThrottleRef.current = now
+
+      const tool = getEffectiveTool()
+      if (tool !== 'pointer') {
+        if (hoverCursor) setHoverCursor(null)
+        return
+      }
+
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const { wx, wy } = screenToWorld(e.clientX, e.clientY, canvas)
+      const hitId = hitTestLayers(wx, wy)
+
+      if (hitId) {
+        const layer = findLayerById(useEditorStore.getState().layers, hitId)
+        setHoverCursor(layer?.type === 'text' ? 'text' : null)
+      } else {
+        setHoverCursor(null)
+      }
+    },
+    [canvasRef, getEffectiveTool, hoverCursor],
+  )
+
   return {
     onPointerDown,
     onPointerMove,
@@ -387,5 +418,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
     onWheel,
     setTempHand,
     getDrawPreview,
+    hoverCursor,
+    onHoverMove,
   }
 }
