@@ -29,6 +29,7 @@ export async function createLayer(
     type: 'image',
     name: name ?? `Layer ${layerCounter}`,
     imageBytes: finalBytes,
+    originalBytes: finalBytes,
     imageBitmap: bitmap,
     width: bitmap.width,
     height: bitmap.height,

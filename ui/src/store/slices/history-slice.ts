@@ -14,11 +14,19 @@ function snapshotLayer(layer: Layer): LayerSnapshot {
   switch (layer.type) {
     case 'image': {
       return {
-        ...layer,
-        imageBitmap: undefined as never,
+        id: layer.id,
+        type: layer.type,
+        name: layer.name,
+        visible: layer.visible,
+        opacity: layer.opacity,
+        blendMode: layer.blendMode,
+        locked: layer.locked,
+        imageBytes: layer.imageBytes,
+        width: layer.width,
+        height: layer.height,
         transform: { ...layer.transform },
         mask,
-      } as unknown as LayerSnapshot
+      } as LayerSnapshot
     }
     case 'shape':
     case 'text':
@@ -37,7 +45,7 @@ function snapshotLayers(layers: Layer[]): LayerSnapshot[] {
   return layers.map(snapshotLayer)
 }
 
-async function restoreLayer(snap: LayerSnapshot): Promise<Layer> {
+async function restoreLayer(snap: LayerSnapshot, origMap: Map<string, Uint8Array>): Promise<Layer> {
   // Restore mask bitmap if present
   const mask = snap.mask
     ? {
@@ -48,13 +56,14 @@ async function restoreLayer(snap: LayerSnapshot): Promise<Layer> {
 
   switch (snap.type) {
     case 'image': {
-      const s = snap as Omit<Layer & { type: 'image' }, 'imageBitmap'>
+      const s = snap as Omit<Layer & { type: 'image' }, 'imageBitmap' | 'originalBytes'>
       return {
         ...s,
         transform: { ...s.transform },
         imageBitmap: await decodeToBitmap(s.imageBytes),
+        originalBytes: origMap.get(s.id) ?? s.imageBytes,
         mask,
-      }
+      } as Layer
     }
     case 'shape':
     case 'text':
@@ -64,14 +73,27 @@ async function restoreLayer(snap: LayerSnapshot): Promise<Layer> {
       return {
         ...g,
         transform: { ...g.transform },
-        children: await Promise.all(g.children.map(restoreLayer)),
+        children: await Promise.all(g.children.map((c) => restoreLayer(c, origMap))),
         mask,
       } as Layer
     }
   }
 }
 
-async function restoreLayers(snapshots: LayerSnapshot[]): Promise<Layer[]> {
+function buildOriginalBytesMap(layers: Layer[]): Map<string, Uint8Array> {
+  const map = new Map<string, Uint8Array>()
+  for (const l of layers) {
+    if (l.type === 'image') map.set(l.id, l.originalBytes)
+    else if (l.type === 'group') {
+      for (const [k, v] of buildOriginalBytesMap(l.children)) map.set(k, v)
+    }
+  }
+  return map
+}
+
+async function restoreLayers(snapshots: LayerSnapshot[], currentLayers: Layer[]): Promise<Layer[]> {
+  const origMap = buildOriginalBytesMap(currentLayers)
+
   // Collect all image bytes that need bitmap decoding
   const imageLayers: { snap: LayerSnapshot; index: number }[] = []
   collectImageSnapshots(snapshots, imageLayers)
@@ -85,13 +107,13 @@ async function restoreLayers(snapshots: LayerSnapshot[]): Promise<Layer[]> {
       const bitmapMap = new Map<LayerSnapshot, ImageBitmap>()
       imageLayers.forEach((item, i) => bitmapMap.set(item.snap, bitmaps[i]))
 
-      return Promise.all(snapshots.map((snap) => restoreLayerWithMap(snap, bitmapMap)))
+      return Promise.all(snapshots.map((snap) => restoreLayerWithMap(snap, bitmapMap, origMap)))
     } catch {
       // Fallback to individual decode
     }
   }
 
-  return Promise.all(snapshots.map(restoreLayer))
+  return Promise.all(snapshots.map((snap) => restoreLayer(snap, origMap)))
 }
 
 function collectImageSnapshots(
@@ -111,6 +133,7 @@ function collectImageSnapshots(
 async function restoreLayerWithMap(
   snap: LayerSnapshot,
   bitmapMap: Map<LayerSnapshot, ImageBitmap>,
+  origMap: Map<string, Uint8Array>,
 ): Promise<Layer> {
   const mask = snap.mask
     ? { ...snap.mask, imageBitmap: await decodeToBitmap(snap.mask.imageBytes) }
@@ -118,9 +141,15 @@ async function restoreLayerWithMap(
 
   switch (snap.type) {
     case 'image': {
-      const s = snap as Omit<Layer & { type: 'image' }, 'imageBitmap'>
+      const s = snap as Omit<Layer & { type: 'image' }, 'imageBitmap' | 'originalBytes'>
       const bitmap = bitmapMap.get(snap) ?? (await decodeToBitmap(s.imageBytes))
-      return { ...s, transform: { ...s.transform }, imageBitmap: bitmap, mask }
+      return {
+        ...s,
+        transform: { ...s.transform },
+        imageBitmap: bitmap,
+        originalBytes: origMap.get(s.id) ?? s.imageBytes,
+        mask,
+      } as Layer
     }
     case 'shape':
     case 'text':
@@ -130,7 +159,9 @@ async function restoreLayerWithMap(
       return {
         ...g,
         transform: { ...g.transform },
-        children: await Promise.all(g.children.map((c) => restoreLayerWithMap(c, bitmapMap))),
+        children: await Promise.all(
+          g.children.map((c) => restoreLayerWithMap(c, bitmapMap, origMap)),
+        ),
         mask,
       } as Layer
     }
@@ -155,7 +186,7 @@ export const createHistorySlice: StateCreator<EditorState, [], [], HistorySlice>
     const stack = [...undoStack]
     const prev = stack.pop()!
     const currentSnap = snapshotLayers(layers)
-    const restored = await restoreLayers(prev)
+    const restored = await restoreLayers(prev, layers)
     set((s) => ({
       undoStack: stack,
       redoStack: [...s.redoStack, currentSnap],
@@ -170,7 +201,7 @@ export const createHistorySlice: StateCreator<EditorState, [], [], HistorySlice>
     const stack = [...redoStack]
     const next = stack.pop()!
     const currentSnap = snapshotLayers(layers)
-    const restored = await restoreLayers(next)
+    const restored = await restoreLayers(next, layers)
     set((s) => ({
       redoStack: stack,
       undoStack: [...s.undoStack, currentSnap],

@@ -96,7 +96,7 @@ export function AdjustPanel() {
 
   const getBase = useCallback(() => {
     if (!baseRef.current && layer) {
-      baseRef.current = layer.imageBytes
+      baseRef.current = layer.originalBytes
     }
     return baseRef.current
   }, [layer])

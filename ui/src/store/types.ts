@@ -96,6 +96,7 @@ export interface LayerBase {
 export interface ImageLayer extends LayerBase {
   type: 'image'
   imageBytes: Uint8Array
+  originalBytes: Uint8Array
   imageBitmap: ImageBitmap | null
   width: number
   height: number
@@ -137,7 +138,11 @@ export type Layer = ImageLayer | ShapeLayer | TextLayer | GroupLayer
 
 // --- Snapshot types ---
 
-export type LayerSnapshot = Omit<ImageLayer, 'imageBitmap'> | ShapeLayer | TextLayer | GroupSnapshot
+export type LayerSnapshot =
+  | Omit<ImageLayer, 'imageBitmap' | 'originalBytes'>
+  | ShapeLayer
+  | TextLayer
+  | GroupSnapshot
 
 export interface GroupSnapshot extends Omit<GroupLayer, 'children'> {
   children: LayerSnapshot[]

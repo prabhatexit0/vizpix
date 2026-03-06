@@ -36,6 +36,7 @@ interface VpdLayerBase {
 interface VpdImageEntry extends VpdLayerBase {
   type: 'image'
   blob: string
+  originalBlob?: string
   width: number
   height: number
 }
@@ -155,7 +156,7 @@ function serializeLayer(l: Layer, files: Record<string, Uint8Array>): VpdLayerEn
   switch (l.type) {
     case 'image': {
       files[`blobs/${l.id}.png`] = l.imageBytes
-      return {
+      const entry: VpdImageEntry = {
         id: l.id,
         type: 'image',
         name: l.name,
@@ -163,7 +164,13 @@ function serializeLayer(l: Layer, files: Record<string, Uint8Array>): VpdLayerEn
         width: l.width,
         height: l.height,
         ...base,
-      } as VpdImageEntry
+      }
+      if (l.originalBytes !== l.imageBytes) {
+        const origPath = `blobs/orig-${l.id}.png`
+        files[origPath] = l.originalBytes
+        entry.originalBlob = origPath
+      }
+      return entry
     }
     case 'shape': {
       const entry: VpdShapeEntry = {
@@ -296,10 +303,14 @@ async function deserializeLayer(
       const bytes = unzipped[imgEntry.blob]
       if (!bytes) return null
       const bitmap = await decodeToBitmap(bytes)
+      const originalBytes = imgEntry.originalBlob
+        ? (unzipped[imgEntry.originalBlob] ?? bytes)
+        : bytes
       return {
         ...base,
         type: 'image',
         imageBytes: bytes,
+        originalBytes,
         imageBitmap: bitmap,
         width: imgEntry.width,
         height: imgEntry.height,
