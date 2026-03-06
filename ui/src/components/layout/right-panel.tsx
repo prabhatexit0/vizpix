@@ -85,7 +85,7 @@ function ResizeHandle({ onResize }: { onResize: (deltaX: number) => void }) {
 
   return (
     <div
-      className="absolute top-0 left-0 z-10 h-full w-1.5 cursor-col-resize transition-colors select-none hover:bg-blue-500/40 active:bg-blue-500/60"
+      className="absolute top-0 -left-1.5 z-10 h-full w-3 cursor-col-resize transition-colors select-none hover:bg-blue-500/40 active:bg-blue-500/60"
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
