@@ -3,6 +3,8 @@ import type { EditorState, HistorySlice, LayerSnapshot, Layer } from '../types'
 import { HISTORY_MAX } from '@/lib/constants'
 import { decodeToBitmap, batchDecodeToBitmaps } from '@/lib/canvas-utils'
 
+const MIN_HISTORY = 5
+
 function snapshotMask(mask: Layer['mask']): Layer['mask'] {
   if (!mask) return mask
   return { ...mask, imageBitmap: null }
@@ -43,6 +45,66 @@ function snapshotLayer(layer: Layer): LayerSnapshot {
 
 function snapshotLayers(layers: Layer[]): LayerSnapshot[] {
   return layers.map(snapshotLayer)
+}
+
+function snapshotLayersWithDelta(
+  layers: Layer[],
+  prevSnapshots: LayerSnapshot[] | null,
+): LayerSnapshot[] {
+  if (!prevSnapshots) return snapshotLayers(layers)
+
+  const prevMap = new Map<string, LayerSnapshot>()
+  buildSnapshotMap(prevSnapshots, prevMap)
+
+  return layers.map((layer) => {
+    const prev = prevMap.get(layer.id)
+    if (prev && layer.type === 'image' && prev.type === 'image') {
+      const prevImg = prev as { imageBytes: Uint8Array }
+      if (Object.is(layer.imageBytes, prevImg.imageBytes)) {
+        return prev
+      }
+    }
+    return snapshotLayer(layer)
+  })
+}
+
+function buildSnapshotMap(snapshots: LayerSnapshot[], map: Map<string, LayerSnapshot>): void {
+  for (const snap of snapshots) {
+    map.set(snap.id, snap)
+    if (snap.type === 'group') {
+      const g = snap as { children: LayerSnapshot[] }
+      buildSnapshotMap(g.children, map)
+    }
+  }
+}
+
+function estimateUniqueMemory(stacks: LayerSnapshot[][][]): number {
+  const seen = new Set<Uint8Array>()
+  let total = 0
+  for (const stack of stacks) {
+    for (const snap of stack) {
+      collectUniqueBytes(snap, seen)
+    }
+  }
+  for (const bytes of seen) {
+    total += bytes.byteLength
+  }
+  return total
+}
+
+function collectUniqueBytes(snapshots: LayerSnapshot[], seen: Set<Uint8Array>): void {
+  for (const snap of snapshots) {
+    if (snap.type === 'image') {
+      const img = snap as { imageBytes: Uint8Array }
+      seen.add(img.imageBytes)
+    } else if (snap.type === 'group') {
+      const g = snap as { children: LayerSnapshot[] }
+      collectUniqueBytes(g.children, seen)
+    }
+    if (snap.mask) {
+      seen.add(snap.mask.imageBytes)
+    }
+  }
 }
 
 async function restoreLayer(snap: LayerSnapshot, origMap: Map<string, Uint8Array>): Promise<Layer> {
@@ -173,10 +235,29 @@ export const createHistorySlice: StateCreator<EditorState, [], [], HistorySlice>
   redoStack: [],
 
   pushSnapshot: () => {
-    const { layers, undoStack } = get()
-    const snap = snapshotLayers(layers)
+    const { layers, undoStack, redoStack } = get()
+    const prevSnap = undoStack.length > 0 ? undoStack[undoStack.length - 1] : null
+    const snap = snapshotLayersWithDelta(layers, prevSnap)
     const stack = [...undoStack, snap]
-    if (stack.length > HISTORY_MAX) stack.shift()
+
+    const memoryBytes = estimateUniqueMemory([stack, redoStack])
+    const memoryMB = memoryBytes / (1024 * 1024)
+    let effectiveMax = HISTORY_MAX
+    if (memoryMB > 500) {
+      effectiveMax = Math.max(MIN_HISTORY, Math.floor((HISTORY_MAX * 500) / memoryMB))
+    }
+
+    let trimmed = false
+    while (stack.length > effectiveMax) {
+      stack.shift()
+      trimmed = true
+    }
+    if (trimmed && memoryMB > 500) {
+      console.warn(
+        `History trimmed: estimated ${memoryMB.toFixed(0)}MB exceeds 500MB limit (max entries reduced to ${effectiveMax})`,
+      )
+    }
+
     set({ undoStack: stack, redoStack: [] })
   },
 
