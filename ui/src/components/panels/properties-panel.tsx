@@ -19,6 +19,7 @@ import { findLayerById, getLayerDimensions } from '@/lib/layer-utils'
 
 export function PropertiesPanel() {
   const activeLayerId = useEditorStore((s) => s.activeLayerId)
+  const editingTextLayerId = useEditorStore((s) => s.editingTextLayerId)
   const layer = useEditorStore((s) => findLayerById(s.layers, s.activeLayerId ?? ''))
   const setTransform = useEditorStore((s) => s.setTransform)
   const setOpacity = useEditorStore((s) => s.setOpacity)
@@ -445,12 +446,19 @@ export function PropertiesPanel() {
             <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
               Content
             </label>
-            <textarea
-              value={layer.content}
-              onChange={(e) => updateTextProperties(activeLayerId, { content: e.target.value })}
-              className="w-full rounded-md border border-white/12 bg-white/5 px-2 py-1.5 text-xs text-neutral-200 outline-none focus:ring-1 focus:ring-blue-500/50"
-              rows={3}
-            />
+            {editingTextLayerId === activeLayerId ? (
+              <div className="w-full rounded-md border border-white/12 bg-white/5 px-2 py-1.5 text-xs text-neutral-400 italic">
+                Editing on canvas...
+              </div>
+            ) : (
+              <textarea
+                value={layer.content}
+                onFocus={onInputFocus}
+                onChange={(e) => updateTextProperties(activeLayerId, { content: e.target.value })}
+                className="w-full rounded-md border border-white/12 bg-white/5 px-2 py-1.5 text-xs text-neutral-200 outline-none focus:ring-1 focus:ring-blue-500/50"
+                rows={3}
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2">
