@@ -53,8 +53,9 @@ function CanvasSizeForm({
   const [background, setBackground] = useState(docBg)
 
   const aspectRatio = width / height
-  const previewW = aspectRatio >= 1 ? 120 : Math.round(120 * aspectRatio)
-  const previewH = aspectRatio >= 1 ? Math.round(120 / aspectRatio) : 120
+  const maxDim = 160
+  const previewW = aspectRatio >= 1 ? maxDim : Math.round(maxDim * aspectRatio)
+  const previewH = aspectRatio >= 1 ? Math.round(maxDim / aspectRatio) : maxDim
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof CANVAS_SIZE_PRESETS>()
@@ -158,9 +159,9 @@ function CanvasSizeForm({
       </div>
 
       {/* Preview */}
-      <div className="flex items-center justify-center">
+      <div className="flex h-44 items-center justify-center rounded-lg bg-neutral-900/50">
         <div
-          className="border border-white/15"
+          className="rounded-sm border border-white/15 shadow-lg"
           style={{
             width: previewW,
             height: previewH,
