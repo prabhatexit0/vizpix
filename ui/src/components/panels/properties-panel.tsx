@@ -14,7 +14,7 @@ import { ColorPicker } from '@/components/ui/color-picker'
 import { Button } from '@/components/ui/button'
 import { BLEND_MODES } from '@/lib/constants'
 import type { BlendMode, Fill, FontWeight, TextRun } from '@/store/types'
-import { Layers, Loader2, ImagePlus, RotateCcw, X } from 'lucide-react'
+import { Layers, Loader2, ImagePlus, Link, Unlink, RotateCcw, X } from 'lucide-react'
 import { computeHistogram, type HistogramData } from '@/lib/histogram-utils'
 import { HistogramDisplay } from './histogram-display'
 import { findLayerById, getLayerDimensions } from '@/lib/layer-utils'
@@ -54,6 +54,8 @@ export function PropertiesPanel() {
   const invertLayerMask = useEditorStore((s) => s.invertLayerMask)
   const pushSnapshot = useEditorStore((s) => s.pushSnapshot)
 
+  const [constrainProportions, setConstrainProportions] = useState(false)
+
   const isEditingText = layer?.type === 'text' && editingTextLayerId === activeLayerId
   const hasRangeSelection =
     isEditingText && textSelection !== null && textSelection.start !== textSelection.end
@@ -86,23 +88,6 @@ export function PropertiesPanel() {
   const onInputFocus = useCallback(() => {
     pushSnapshot()
   }, [pushSnapshot])
-
-  const clampedUpdate = useCallback(
-    (
-      fn: (id: string, val: Record<string, unknown>) => void,
-      id: string,
-      key: string,
-      raw: string,
-      min?: number,
-      max?: number,
-    ) => {
-      const n = Number(raw)
-      if (Number.isNaN(n)) return
-      const clamped = Math.max(min ?? -Infinity, Math.min(max ?? Infinity, n))
-      fn(id, { [key]: clamped })
-    },
-    [],
-  )
 
   const [histogram, setHistogram] = useState<HistogramData | null>(null)
   const [histBytesRef, setHistBytesRef] = useState<Uint8Array | null>(null)
@@ -154,7 +139,14 @@ export function PropertiesPanel() {
   const displayY = Math.round(transform.y + documentHeight / 2)
 
   return (
-    <div className="flex flex-col gap-3 overflow-y-auto p-3">
+    <div
+      className="flex flex-col gap-3 overflow-y-auto p-3"
+      onPointerDown={(e) => {
+        if (e.target === e.currentTarget) {
+          ;(document.activeElement as HTMLElement)?.blur?.()
+        }
+      }}
+    >
       {/* Position */}
       <div className="grid grid-cols-2 gap-2">
         <ScrubInput
@@ -251,43 +243,45 @@ export function PropertiesPanel() {
           <p className="text-[11px] font-medium tracking-wider text-neutral-500 uppercase">Shape</p>
 
           {/* Size */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-                W
-              </label>
-              <Input
-                type="number"
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <ScrubInput
+                label="W"
+                value={Math.round(layer.width * transform.scaleX)}
+                step={1}
                 min={1}
-                value={layer.width}
-                onFocus={onInputFocus}
-                onChange={(e) =>
-                  clampedUpdate(updateShapeProperties, activeLayerId, 'width', e.target.value, 1)
-                }
-                onBlur={(e) => {
-                  const n = Number(e.target.value)
-                  if (Number.isNaN(n) || n < 1) updateShapeProperties(activeLayerId, { width: 1 })
+                suffix="px"
+                onChange={(v) => {
+                  const ratio = layer.height / layer.width
+                  updateShapeProperties(activeLayerId, {
+                    width: v / transform.scaleX,
+                    ...(constrainProportions ? { height: (v / transform.scaleX) * ratio } : {}),
+                  })
                 }}
-                className="h-8 text-xs"
+                onCommit={() => pushSnapshot()}
               />
             </div>
-            <div>
-              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-                H
-              </label>
-              <Input
-                type="number"
+            <button
+              className={`mb-0.5 shrink-0 rounded p-1 ${constrainProportions ? 'text-blue-400' : 'text-neutral-500'}`}
+              onClick={() => setConstrainProportions((p) => !p)}
+            >
+              {constrainProportions ? <Link size={14} /> : <Unlink size={14} />}
+            </button>
+            <div className="flex-1">
+              <ScrubInput
+                label="H"
+                value={Math.round(layer.height * transform.scaleY)}
+                step={1}
                 min={1}
-                value={layer.height}
-                onFocus={onInputFocus}
-                onChange={(e) =>
-                  clampedUpdate(updateShapeProperties, activeLayerId, 'height', e.target.value, 1)
-                }
-                onBlur={(e) => {
-                  const n = Number(e.target.value)
-                  if (Number.isNaN(n) || n < 1) updateShapeProperties(activeLayerId, { height: 1 })
+                suffix="px"
+                onChange={(v) => {
+                  const ratio = layer.width / layer.height
+                  updateShapeProperties(activeLayerId, {
+                    height: v / transform.scaleY,
+                    ...(constrainProportions ? { width: (v / transform.scaleY) * ratio } : {}),
+                  })
                 }}
-                className="h-8 text-xs"
+                onCommit={() => pushSnapshot()}
               />
             </div>
           </div>
