@@ -2,7 +2,7 @@ import { useCallback, useRef, useState, useEffect } from 'react'
 import { useEditorStore } from '@/store'
 import { Slider } from '@/components/ui/slider'
 import { Button } from '@/components/ui/button'
-import { SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal, X } from 'lucide-react'
 import { findLayerById } from '@/lib/layer-utils'
 
 interface AdjustValues {
@@ -152,12 +152,13 @@ export function AdjustPanel() {
 
   const handleChange = useCallback(
     (key: keyof AdjustValues, val: number) => {
+      if (processing) return
       const next = { ...values, [key]: val }
       setValues(next)
       clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => applyAdjust(next), 300)
     },
-    [values, applyAdjust],
+    [values, applyAdjust, processing],
   )
 
   const handleReset = useCallback(async () => {
@@ -197,12 +198,22 @@ export function AdjustPanel() {
             {section.label}
           </p>
           {section.sliders.map(({ key, label, min, max, step, format }) => (
-            <div key={key}>
+            <div key={key} className={processing ? 'pointer-events-none opacity-50' : ''}>
               <div className="mb-1.5 flex items-center justify-between">
                 <label className="text-xs tracking-wide text-neutral-500 uppercase">{label}</label>
-                <span className="text-xs text-neutral-400 tabular-nums">
-                  {format ? format(values[key]) : values[key]}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-neutral-400 tabular-nums">
+                    {format ? format(values[key]) : values[key]}
+                  </span>
+                  {values[key] !== DEFAULTS[key] && (
+                    <button
+                      onClick={() => handleChange(key, DEFAULTS[key])}
+                      className="rounded p-0.5 text-neutral-500 hover:bg-white/10 hover:text-neutral-300"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
               </div>
               <Slider
                 value={[values[key]]}
