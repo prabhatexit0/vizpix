@@ -1,4 +1,4 @@
-import type { TextRun, TextLayer } from '@/store/types'
+import type { TextRun, TextLayer, Fill } from '@/store/types'
 
 export function getPlainText(runs: TextRun[]): string {
   return runs.map((r) => r.text).join('')

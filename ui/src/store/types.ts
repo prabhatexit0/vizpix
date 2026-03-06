@@ -255,16 +255,24 @@ export interface ViewportSlice {
   cycleCanvasBg: () => void
 }
 
+export interface TextSelection {
+  start: number
+  end: number
+}
+
 export interface ToolsSlice {
   activeTool: ToolMode
   activePanel: string
   editingTextLayerId: string | null
+  textSelection: TextSelection | null
   showShortcuts: boolean
   pendingDeleteLayerId: string | null
   setActiveTool: (tool: ToolMode) => void
   setActivePanel: (panel: string) => void
   setShowShortcuts: (show: boolean) => void
   setEditingTextLayerId: (id: string | null) => void
+  setTextSelection: (sel: TextSelection | null) => void
+  applyTextFormatting: (layerId: string, props: Partial<TextRun>) => void
   setPendingDeleteLayerId: (id: string | null) => void
 }
 

@@ -22,6 +22,7 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
   })
   const updateTextProperties = useEditorStore((s) => s.updateTextProperties)
   const setEditingTextLayerId = useEditorStore((s) => s.setEditingTextLayerId)
+  const setTextSelection = useEditorStore((s) => s.setTextSelection)
   const pushSnapshot = useEditorStore((s) => s.pushSnapshot)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -50,6 +51,7 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     ta.value = layer.content
     ta.focus()
     ta.select()
+    setTextSelection({ start: 0, end: layer.content.length })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Register click-to-cursor callback
@@ -69,6 +71,7 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
       const idx = findCursorIndexFromLocal(layer, localX, localY)
       setCursorIndex(idx)
       setSelectionEnd(idx)
+      setTextSelection({ start: idx, end: idx })
       const ta = textareaRef.current
       if (ta) {
         ta.selectionStart = idx
@@ -78,13 +81,14 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     }
     setTextCursorClickCallback(callback)
     return () => setTextCursorClickCallback(null)
-  }, [layer])
+  }, [layer, setTextSelection])
 
   const commit = useCallback(() => {
     if (committedRef.current) return
     committedRef.current = true
+    setTextSelection(null)
     setEditingTextLayerId(null)
-  }, [setEditingTextLayerId])
+  }, [setEditingTextLayerId, setTextSelection])
 
   const onBlur = useCallback(
     (e: React.FocusEvent) => {
@@ -119,16 +123,22 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     }
 
     updateTextProperties(layerId, { content: ta.value })
-    setCursorIndex(ta.selectionStart ?? 0)
-    setSelectionEnd(ta.selectionEnd ?? ta.selectionStart ?? 0)
-  }, [layer, layerId, updateTextProperties, pushSnapshot])
+    const start = ta.selectionStart ?? 0
+    const end = ta.selectionEnd ?? start
+    setCursorIndex(start)
+    setSelectionEnd(end)
+    setTextSelection({ start, end })
+  }, [layer, layerId, updateTextProperties, pushSnapshot, setTextSelection])
 
   const onSelect = useCallback(() => {
     const ta = textareaRef.current
     if (!ta) return
-    setCursorIndex(ta.selectionStart ?? 0)
-    setSelectionEnd(ta.selectionEnd ?? ta.selectionStart ?? 0)
-  }, [])
+    const start = ta.selectionStart ?? 0
+    const end = ta.selectionEnd ?? start
+    setCursorIndex(start)
+    setSelectionEnd(end)
+    setTextSelection({ start, end })
+  }, [setTextSelection])
 
   const removeLayer = useEditorStore((s) => s.removeLayer)
   const setActiveTool = useEditorStore((s) => s.setActiveTool)
@@ -140,6 +150,7 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
         const ta = textareaRef.current
         if (ta && ta.value === '') {
           committedRef.current = true
+          setTextSelection(null)
           setEditingTextLayerId(null)
           removeLayer(layerId)
           setActiveTool('pointer')
@@ -155,10 +166,11 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
           ta.selectionEnd = ta.value.length
           setCursorIndex(0)
           setSelectionEnd(ta.value.length)
+          setTextSelection({ start: 0, end: ta.value.length })
         }
       }
     },
-    [commit, layerId, removeLayer, setActiveTool, setEditingTextLayerId],
+    [commit, layerId, removeLayer, setActiveTool, setEditingTextLayerId, setTextSelection],
   )
 
   // Compute caret screen position
