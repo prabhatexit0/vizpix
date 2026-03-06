@@ -76,16 +76,21 @@ export function EditorCanvas() {
     canvas.style.height = `${height}px`
   }, [])
 
-  // ResizeObserver
+  // ResizeObserver — throttle to RAF to avoid multiple resizes per frame
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
+    let resizeRaf = 0
     const ro = new ResizeObserver(() => {
-      resize()
+      cancelAnimationFrame(resizeRaf)
+      resizeRaf = requestAnimationFrame(resize)
     })
     ro.observe(container)
     resize()
-    return () => ro.disconnect()
+    return () => {
+      cancelAnimationFrame(resizeRaf)
+      ro.disconnect()
+    }
   }, [resize])
 
   // Render loop
@@ -117,6 +122,7 @@ export function EditorCanvas() {
       ref={containerRef}
       data-slot="editor-canvas"
       className="relative flex-1 overflow-hidden bg-neutral-950"
+      style={{ willChange: 'transform' }}
     >
       <canvas
         ref={canvasRef}
