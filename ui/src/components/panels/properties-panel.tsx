@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { SliderInput } from '@/components/ui/slider-input'
+import { ColorPicker } from '@/components/ui/color-picker'
 import { Button } from '@/components/ui/button'
 import { BLEND_MODES } from '@/lib/constants'
 import type { BlendMode, Fill, FontWeight, TextRun } from '@/store/types'
@@ -298,25 +299,15 @@ export function PropertiesPanel() {
                 Fill
               </label>
               <div className="flex items-center gap-2">
-                <input
-                  type="color"
+                <ColorPicker
                   value={layer.fill.color}
-                  onChange={(e) =>
+                  onChange={(c) =>
                     updateShapeProperties(activeLayerId, {
-                      fill: { type: 'solid', color: e.target.value },
+                      fill: { type: 'solid', color: c },
                     })
                   }
-                  className="h-8 w-8 cursor-pointer rounded border border-white/12 bg-transparent"
                 />
-                <Input
-                  value={layer.fill.color}
-                  onChange={(e) =>
-                    updateShapeProperties(activeLayerId, {
-                      fill: { type: 'solid', color: e.target.value },
-                    })
-                  }
-                  className="h-8 flex-1 text-xs"
-                />
+                <span className="text-xs text-neutral-400">{layer.fill.color}</span>
               </div>
             </div>
           )}
@@ -398,16 +389,17 @@ export function PropertiesPanel() {
             <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
               Stroke Color
             </label>
-            <input
-              type="color"
-              value={layer.stroke.color}
-              onChange={(e) =>
-                updateShapeProperties(activeLayerId, {
-                  stroke: { ...layer.stroke, color: e.target.value },
-                })
-              }
-              className="h-8 w-full cursor-pointer rounded border border-white/12 bg-transparent"
-            />
+            <div className="flex items-center gap-2">
+              <ColorPicker
+                value={layer.stroke.color}
+                onChange={(c) =>
+                  updateShapeProperties(activeLayerId, {
+                    stroke: { ...layer.stroke, color: c },
+                  })
+                }
+              />
+              <span className="text-xs text-neutral-400">{layer.stroke.color}</span>
+            </div>
           </div>
 
           {/* Corner radius (rectangle only) */}
@@ -625,25 +617,15 @@ export function PropertiesPanel() {
                   Color{isMixedColor ? ' (Mixed)' : ''}
                 </label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="color"
+                  <ColorPicker
                     value={colorValue}
-                    onChange={(e) =>
+                    onChange={(c) =>
                       updateTextProp({
-                        fill: { type: 'solid', color: e.target.value },
+                        fill: { type: 'solid', color: c },
                       })
                     }
-                    className="h-8 w-8 cursor-pointer rounded border border-white/12 bg-transparent"
                   />
-                  <Input
-                    value={colorValue}
-                    onChange={(e) =>
-                      updateTextProp({
-                        fill: { type: 'solid', color: e.target.value },
-                      })
-                    }
-                    className="h-8 flex-1 text-xs"
-                  />
+                  <span className="text-xs text-neutral-400">{colorValue}</span>
                 </div>
               </div>
             )
