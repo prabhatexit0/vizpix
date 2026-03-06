@@ -62,6 +62,7 @@ export function EditorCanvas() {
   const editingTextLayerId = useEditorStore((s) => s.editingTextLayerId)
   const canvasBg = useEditorStore((s) => s.canvasBg)
   const cycleCanvasBg = useEditorStore((s) => s.cycleCanvasBg)
+  const setZoom = useEditorStore((s) => s.setZoom)
 
   // Force re-render when fonts finish loading so text layers use the correct font
   const [, setFontsLoaded] = useState(false)
@@ -164,14 +165,24 @@ export function EditorCanvas() {
       {editingTextLayerId && (
         <InlineTextEditor canvasRef={canvasRef} layerId={editingTextLayerId} viewport={viewport} />
       )}
-      <button
-        onClick={cycleCanvasBg}
-        className="absolute right-2 bottom-2 z-10 flex items-center gap-1.5 rounded-md bg-neutral-900/80 px-2 py-1 text-xs text-neutral-400 backdrop-blur-sm transition-colors hover:text-white"
-        title="Toggle canvas background"
-      >
-        <Grid2X2 size={12} />
-        <span className="capitalize">{canvasBg === 'checkerboard' ? 'Check' : canvasBg}</span>
-      </button>
+      <div className="absolute right-2 bottom-2 z-10 flex items-center gap-1 rounded-md bg-neutral-900/80 text-xs text-neutral-400 backdrop-blur-sm">
+        <button
+          onClick={() => setZoom(1)}
+          className="px-2 py-1 transition-colors hover:text-white"
+          title="Click to reset zoom to 100%"
+        >
+          {Math.round(viewport.zoom * 100)}%
+        </button>
+        <div className="h-3 w-px bg-white/15" />
+        <button
+          onClick={cycleCanvasBg}
+          className="flex items-center gap-1.5 px-2 py-1 transition-colors hover:text-white"
+          title="Toggle canvas background"
+        >
+          <Grid2X2 size={12} />
+          <span className="capitalize">{canvasBg === 'checkerboard' ? 'Check' : canvasBg}</span>
+        </button>
+      </div>
     </div>
   )
 }
