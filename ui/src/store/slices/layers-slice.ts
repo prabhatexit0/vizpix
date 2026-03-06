@@ -221,7 +221,7 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
       id: crypto.randomUUID(),
       type: 'text',
       name: `Text ${textCounter}`,
-      content: 'Text',
+      content: '',
       fontFamily: 'Inter',
       fontSize: 24,
       fontWeight: 400,

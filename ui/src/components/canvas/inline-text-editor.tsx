@@ -114,14 +114,25 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     setCursorIndex(ta.selectionStart ?? 0)
   }, [])
 
+  const removeLayer = useEditorStore((s) => s.removeLayer)
+  const setActiveTool = useEditorStore((s) => s.setActiveTool)
+
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       e.stopPropagation()
       if (e.key === 'Escape') {
-        commit()
+        const ta = textareaRef.current
+        if (ta && ta.value === '') {
+          committedRef.current = true
+          setEditingTextLayerId(null)
+          removeLayer(layerId)
+          setActiveTool('pointer')
+        } else {
+          commit()
+        }
       }
     },
-    [commit],
+    [commit, layerId, removeLayer, setActiveTool, setEditingTextLayerId],
   )
 
   // Compute caret screen position

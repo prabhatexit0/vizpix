@@ -316,8 +316,10 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
           e.shiftKey,
         )
 
+        const isClick = rect.width < MIN_DRAW_SIZE && rect.height < MIN_DRAW_SIZE
+
         // If barely dragged, use default size centered at click point
-        if (rect.width < MIN_DRAW_SIZE && rect.height < MIN_DRAW_SIZE) {
+        if (isClick) {
           rect.x = ptrRef.current.startWX
           rect.y = ptrRef.current.startWY
           rect.width = 200
@@ -330,7 +332,8 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
         } else if (tool === 'draw-ellipse') {
           store.addShapeLayer('ellipse', rect)
         } else if (tool === 'draw-text') {
-          store.addTextLayer(rect.width > 0 ? rect : undefined)
+          // Click = auto-width (no rect), drag = fixed-width
+          store.addTextLayer(isClick ? undefined : rect)
         }
 
         store.setActiveTool('pointer')
