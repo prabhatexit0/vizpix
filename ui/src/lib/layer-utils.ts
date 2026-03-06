@@ -264,4 +264,90 @@ export function findCursorIndexFromLocal(
   return bestOffset
 }
 
+export interface SelectionRect {
+  localX: number
+  localY: number
+  width: number
+  height: number
+}
+
+export function getSelectionRects(
+  layer: Layer & { type: 'text' },
+  selStart: number,
+  selEnd: number,
+): SelectionRect[] {
+  const layout = layoutTextRuns(layer)
+  if (layout.length === 0) return []
+
+  const totalHeight = getTotalHeight(layout)
+  const yStart = -totalHeight / 2
+
+  let textBlockWidth: number
+  if (layer.boxWidth !== null) {
+    textBlockWidth = layer.boxWidth
+  } else {
+    textBlockWidth = Math.max(0, ...layout.map((l) => l.width))
+  }
+
+  const canvas = new OffscreenCanvas(1, 1)
+  const ctx = canvas.getContext('2d')!
+  const rects: SelectionRect[] = []
+
+  for (const line of layout) {
+    const lineEnd = line.startOffset + line.segments.reduce((n, s) => n + s.text.length, 0)
+    if (selStart >= lineEnd || selEnd <= line.startOffset) continue
+
+    const lineW = line.width
+    let lineStartX: number
+    if (layer.textAlign === 'left') lineStartX = -textBlockWidth / 2
+    else if (layer.textAlign === 'right') lineStartX = textBlockWidth / 2 - lineW
+    else lineStartX = -lineW / 2
+
+    // Measure x offset of selStart and selEnd within this line
+    let x = lineStartX
+    let x1 = lineStartX
+    let x2 = lineStartX + lineW
+    let foundStart = selStart <= line.startOffset
+    let foundEnd = false
+
+    for (const seg of line.segments) {
+      ctx.font = seg.font
+      if ('letterSpacing' in ctx) {
+        ;(ctx as CanvasRenderingContext2D).letterSpacing = `${seg.letterSpacing}px`
+      }
+
+      const segEnd = seg.startOffset + seg.text.length
+
+      if (!foundStart && selStart > seg.startOffset && selStart <= segEnd) {
+        const chars = selStart - seg.startOffset
+        x1 = x + ctx.measureText(seg.text.substring(0, chars)).width
+        foundStart = true
+      } else if (!foundStart && selStart <= seg.startOffset) {
+        x1 = x
+        foundStart = true
+      }
+
+      if (!foundEnd && selEnd >= seg.startOffset && selEnd <= segEnd) {
+        const chars = selEnd - seg.startOffset
+        x2 = x + ctx.measureText(seg.text.substring(0, chars)).width
+        foundEnd = true
+      }
+
+      x += seg.width
+    }
+
+    if (!foundStart) x1 = lineStartX
+    if (!foundEnd) x2 = x
+
+    rects.push({
+      localX: x1,
+      localY: yStart + line.yOffset,
+      width: x2 - x1,
+      height: line.lineHeight,
+    })
+  }
+
+  return rects
+}
+
 export { measureTextLayer }

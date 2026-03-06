@@ -6,6 +6,7 @@ import {
   measureCursorPosition,
   findCursorIndexFromLocal,
   getLayerDimensions,
+  getSelectionRects,
   updateLayerInTree,
 } from '@/lib/layer-utils'
 import {
@@ -320,6 +321,9 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     const start = Math.min(cursorIndex, selectionEnd)
     const end = Math.max(cursorIndex, selectionEnd)
 
+    const localRects = getSelectionRects(layer, start, end)
+    if (localRects.length === 0) return null
+
     const cx = canvasRect.width / 2 + viewport.panX
     const cy = canvasRect.height / 2 + viewport.panY
     const { x, y, scaleX, scaleY, rotation } = layer.transform
@@ -329,45 +333,16 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     const sin = Math.sin(rad)
     const worldX = cx + x * zoom
     const worldY = cy + y * zoom
-    const rects: Array<{ x: number; y: number; w: number; h: number; rotation: number }> = []
 
-    for (let i = start; i < end; ) {
-      const startPos = measureCursorPosition(layer, i)
-      // Find the end of the current line or selection end
-      let lineEnd = i + 1
-      while (lineEnd < end) {
-        const nextPos = measureCursorPosition(layer, lineEnd)
-        if (Math.abs(nextPos.localY - startPos.localY) > 1) break
-        lineEnd++
-      }
-      const endPos = measureCursorPosition(layer, lineEnd)
-      const sameLineEnd =
-        Math.abs(endPos.localY - startPos.localY) < 1
-          ? endPos
-          : measureCursorPosition(layer, lineEnd - 1)
-
-      const lineH = startPos.lineHeight
-
-      const lx1 = startPos.localX * scaleX * zoom
-      const ly1 = startPos.localY * scaleY * zoom
-      const lx2 =
-        (Math.abs(sameLineEnd.localY - startPos.localY) < 1
-          ? sameLineEnd.localX
-          : startPos.localX) *
-        scaleX *
-        zoom
-      const ly2 = ly1 + lineH * scaleY * zoom
-
-      const sx = worldX + lx1 * cos - ly1 * sin
-      const sy = worldY + lx1 * sin + ly1 * cos
-      const w = lx2 - lx1
-      const h = ly2 - ly1
-
-      rects.push({ x: sx, y: sy, w: Math.abs(w), h: Math.abs(h), rotation })
-      i = lineEnd
-    }
-
-    return rects
+    return localRects.map((r) => {
+      const lx = r.localX * scaleX * zoom
+      const ly = r.localY * scaleY * zoom
+      const sx = worldX + lx * cos - ly * sin
+      const sy = worldY + lx * sin + ly * cos
+      const w = r.width * Math.abs(scaleX) * zoom
+      const h = r.height * Math.abs(scaleY) * zoom
+      return { x: sx, y: sy, w, h, rotation }
+    })
   }, [layer, canvasRect, viewport, cursorIndex, selectionEnd])
 
   const boundingBox = useMemo(() => {
