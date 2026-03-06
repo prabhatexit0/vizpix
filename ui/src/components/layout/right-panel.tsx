@@ -132,13 +132,13 @@ export function RightPanel() {
       <>
         <button
           onClick={() => setDrawerOpen(true)}
-          className="absolute top-4 right-0 z-50 rounded-l-lg border border-r-0 border-white/10 bg-neutral-900/90 p-2 text-neutral-400 backdrop-blur-md hover:text-white"
+          className="absolute top-4 right-[env(safe-area-inset-right)] z-50 rounded-l-lg border border-r-0 border-white/10 bg-neutral-900/90 p-2 text-neutral-400 backdrop-blur-md hover:text-white"
         >
           <PanelRight size={18} />
         </button>
         <Drawer direction="right" open={drawerOpen} onOpenChange={handleDrawerChange}>
           <DrawerContent className="h-full">
-            <div className="flex h-full flex-col">
+            <div className="flex h-full flex-col pr-[env(safe-area-inset-right)]">
               <PanelTabs />
             </div>
           </DrawerContent>

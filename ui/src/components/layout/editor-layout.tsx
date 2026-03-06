@@ -21,7 +21,7 @@ export function EditorLayout() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex h-dvh w-screen overflow-hidden bg-neutral-950 text-white">
+      <div className="flex h-screen w-screen overflow-hidden bg-neutral-950 pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] text-white">
         <Toolbar />
         <EditorCanvas />
         <RightPanel />

@@ -1,0 +1,16 @@
+{
+  "name": "VizPix",
+  "short_name": "VizPix",
+  "description": "Browser-based image editor",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
