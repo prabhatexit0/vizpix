@@ -341,7 +341,7 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
         {isActive && layer.type === 'image' && (
           <div className="flex items-center gap-1 pl-10">
             <span className="text-[10px] text-neutral-500">
-              {layer.width} x {layer.height}
+              {Math.round(layer.width)} x {Math.round(layer.height)}
             </span>
           </div>
         )}

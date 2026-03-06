@@ -257,7 +257,7 @@ export function PropertiesPanel() {
 
       {/* Dimensions */}
       <div className="rounded-md bg-white/5 px-3 py-1.5 text-xs text-neutral-400">
-        {dims.width} × {dims.height} px
+        {Math.round(dims.width)} × {Math.round(dims.height)} px
       </div>
 
       {/* Shape-specific properties */}
