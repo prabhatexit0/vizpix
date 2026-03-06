@@ -247,10 +247,12 @@ export interface ToolsSlice {
   activePanel: string
   editingTextLayerId: string | null
   showShortcuts: boolean
+  pendingDeleteLayerId: string | null
   setActiveTool: (tool: ToolMode) => void
   setActivePanel: (panel: string) => void
   setShowShortcuts: (show: boolean) => void
   setEditingTextLayerId: (id: string | null) => void
+  setPendingDeleteLayerId: (id: string | null) => void
 }
 
 export interface HistoryEntry {

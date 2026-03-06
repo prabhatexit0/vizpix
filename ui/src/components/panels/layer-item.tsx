@@ -65,6 +65,8 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
   const pushSnapshot = useEditorStore((s) => s.pushSnapshot)
   const setEditingTextLayerId = useEditorStore((s) => s.setEditingTextLayerId)
   const setActiveTool = useEditorStore((s) => s.setActiveTool)
+  const layerCount = useEditorStore((s) => s.layers.length)
+  const setPendingDeleteLayerId = useEditorStore((s) => s.setPendingDeleteLayerId)
 
   const [editing, setEditing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -266,7 +268,11 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                removeLayer(layer.id)
+                if (layerCount <= 1) {
+                  setPendingDeleteLayerId(layer.id)
+                } else {
+                  removeLayer(layer.id)
+                }
               }}
               className="rounded p-1 text-neutral-400 transition-colors hover:bg-red-500/20 hover:text-red-400"
             >

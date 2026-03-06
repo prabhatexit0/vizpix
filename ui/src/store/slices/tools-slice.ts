@@ -19,6 +19,7 @@ export const createToolsSlice: StateCreator<EditorState, [], [], ToolsSlice> = (
   activePanel: 'layers',
   editingTextLayerId: null,
   showShortcuts: false,
+  pendingDeleteLayerId: null,
 
   setActiveTool: (tool) => {
     cleanupEmptyTextLayer(get, set)
@@ -30,4 +31,5 @@ export const createToolsSlice: StateCreator<EditorState, [], [], ToolsSlice> = (
     if (id === null) cleanupEmptyTextLayer(get, set)
     set({ editingTextLayerId: id })
   },
+  setPendingDeleteLayerId: (id) => set({ pendingDeleteLayerId: id }),
 })

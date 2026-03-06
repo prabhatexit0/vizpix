@@ -237,7 +237,11 @@ export function useKeyboardShortcuts(
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (store.activeLayerId) {
-          store.removeLayer(store.activeLayerId)
+          if (store.layers.length <= 1) {
+            store.setPendingDeleteLayerId(store.activeLayerId)
+          } else {
+            store.removeLayer(store.activeLayerId)
+          }
         }
         return
       }
