@@ -170,3 +170,47 @@
     opacity: 0;
   }
 }
+
+@keyframes pinch {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-3px);
+  }
+}
+
+@keyframes panHand {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes tapRipple {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+@keyframes longPress {
+  0% {
+    stroke-dasharray: 0 50.3;
+  }
+  50% {
+    stroke-dasharray: 50.3 0;
+  }
+  100% {
+    stroke-dasharray: 50.3 0;
+    opacity: 0;
+  }
+}

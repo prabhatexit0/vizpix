@@ -15,6 +15,7 @@ import {
   Circle,
   Type,
   MoreHorizontal,
+  HelpCircle,
 } from 'lucide-react'
 import { Popover as PopoverPrimitive } from 'radix-ui'
 import { useEditorStore } from '@/store'
@@ -26,6 +27,7 @@ import type { ToolMode } from '@/store/types'
 import { CanvasSizeDialog } from '@/components/dialogs/canvas-size-dialog'
 import { ExportDialog } from '@/components/dialogs/export-dialog'
 import { ConfirmDialog } from '@/components/dialogs/confirm-dialog'
+import { GestureHints } from '@/components/canvas/gesture-hints'
 import { saveVpd, loadVpd } from '@/lib/vpd'
 
 const TOOLS: { mode: ToolMode; icon: typeof MousePointer2; label: string; shortcut: string }[] = [
@@ -54,6 +56,7 @@ export function Toolbar() {
   const [canvasSizeOpen, setCanvasSizeOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [gestureHintsOpen, setGestureHintsOpen] = useState(false)
   const pendingFileRef = useRef<File | null>(null)
 
   const handleAddImage = useCallback(() => {
@@ -282,6 +285,7 @@ export function Toolbar() {
     { icon: FolderOpen, label: 'Open', action: handleOpen },
     { icon: Frame, label: 'Canvas Size', action: () => setCanvasSizeOpen(true) },
     { icon: Download, label: 'Export', action: () => setExportOpen(true) },
+    { icon: HelpCircle, label: 'Gestures', action: () => setGestureHintsOpen(true) },
   ]
 
   const hasOverflowToolActive = OVERFLOW_TOOLS.some((t) => t.mode === activeTool)
@@ -298,6 +302,7 @@ export function Toolbar() {
         description="Opening a project will replace your current work. Any unsaved changes will be lost."
         confirmLabel="Open"
       />
+      {gestureHintsOpen && <GestureHints forceShow onClose={() => setGestureHintsOpen(false)} />}
     </>
   )
 

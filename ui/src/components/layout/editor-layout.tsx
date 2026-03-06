@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { ShortcutsDialog } from '@/components/dialogs/shortcuts-dialog'
 import { ConfirmDialog } from '@/components/dialogs/confirm-dialog'
 import { useEditorStore } from '@/store'
+import { GestureHints } from '@/components/canvas/gesture-hints'
 
 export function EditorLayout() {
   const pendingDeleteLayerId = useEditorStore((s) => s.pendingDeleteLayerId)
@@ -27,6 +28,7 @@ export function EditorLayout() {
         <RightPanel />
       </div>
       <ShortcutsDialog />
+      <GestureHints />
       <ConfirmDialog
         open={pendingDeleteLayerId !== null}
         onOpenChange={(open) => {
