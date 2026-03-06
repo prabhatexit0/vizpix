@@ -171,10 +171,15 @@ export function AdjustPanel() {
   }, [activeLayerId, applyWasmToLayer])
 
   if (!layer) {
+    const hasActiveLayer = !!activeLayerId
     return (
       <div className="flex flex-col items-center justify-center gap-2 p-8 text-neutral-500">
         <SlidersHorizontal size={24} strokeWidth={1.5} />
-        <span className="text-xs">Select a layer to adjust</span>
+        <span className="text-center text-xs">
+          {hasActiveLayer
+            ? 'Adjustments are only available for image layers'
+            : 'Select an image layer to adjust'}
+        </span>
       </div>
     )
   }
