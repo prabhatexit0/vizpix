@@ -2,6 +2,7 @@ import { Toolbar } from './toolbar'
 import { RightPanel } from './right-panel'
 import { EditorCanvas } from '@/components/canvas/editor-canvas'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { ShortcutsDialog } from '@/components/dialogs/shortcuts-dialog'
 
 export function EditorLayout() {
   return (
@@ -11,6 +12,7 @@ export function EditorLayout() {
         <EditorCanvas />
         <RightPanel />
       </div>
+      <ShortcutsDialog />
     </TooltipProvider>
   )
 }

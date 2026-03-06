@@ -242,8 +242,10 @@ export interface ToolsSlice {
   activeTool: ToolMode
   activePanel: string
   editingTextLayerId: string | null
+  showShortcuts: boolean
   setActiveTool: (tool: ToolMode) => void
   setActivePanel: (panel: string) => void
+  setShowShortcuts: (show: boolean) => void
   setEditingTextLayerId: (id: string | null) => void
 }
 

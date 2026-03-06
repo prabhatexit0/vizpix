@@ -19,6 +19,12 @@ export function useKeyboardShortcuts(
 
       const store = useEditorStore.getState()
 
+      // Keyboard shortcuts overlay
+      if (e.key === '?' && !store.editingTextLayerId) {
+        store.setShowShortcuts(!store.showShortcuts)
+        return
+      }
+
       // Tool switching
       if (e.key === 'v' || e.key === 'V') {
         if (!e.ctrlKey && !e.metaKey) {

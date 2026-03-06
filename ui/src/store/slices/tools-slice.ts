@@ -18,12 +18,14 @@ export const createToolsSlice: StateCreator<EditorState, [], [], ToolsSlice> = (
   activeTool: 'pointer',
   activePanel: 'layers',
   editingTextLayerId: null,
+  showShortcuts: false,
 
   setActiveTool: (tool) => {
     cleanupEmptyTextLayer(get, set)
     set({ activeTool: tool, editingTextLayerId: null })
   },
   setActivePanel: (panel) => set({ activePanel: panel }),
+  setShowShortcuts: (show) => set({ showShortcuts: show }),
   setEditingTextLayerId: (id) => {
     if (id === null) cleanupEmptyTextLayer(get, set)
     set({ editingTextLayerId: id })
