@@ -3,11 +3,14 @@ import { LayerItem } from './layer-item'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ImagePlus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 
 export function LayersPanel() {
   const layers = useEditorStore((s) => s.layers)
   const addLayer = useEditorStore((s) => s.addLayer)
+  const reorderLayers = useEditorStore((s) => s.reorderLayers)
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [dropIndex, setDropIndex] = useState<number | null>(null)
 
   const handleAddImage = useCallback(() => {
     const input = document.createElement('input')
@@ -22,6 +25,40 @@ export function LayersPanel() {
     input.click()
   }, [addLayer])
 
+  const handleDragStart = useCallback((layerId: string) => {
+    setDragId(layerId)
+  }, [])
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent, targetIndex: number) => {
+      e.preventDefault()
+      if (dragId === null) return
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+      const midY = rect.top + rect.height / 2
+      // In the reversed list, above midpoint = higher index, below = same index
+      const idx = e.clientY < midY ? targetIndex + 1 : targetIndex
+      setDropIndex(idx)
+    },
+    [dragId],
+  )
+
+  const handleDrop = useCallback(() => {
+    if (dragId !== null && dropIndex !== null) {
+      const fromIndex = layers.findIndex((l) => l.id === dragId)
+      if (fromIndex !== -1 && fromIndex !== dropIndex) {
+        const adjustedIndex = dropIndex > fromIndex ? dropIndex - 1 : dropIndex
+        reorderLayers(dragId, adjustedIndex, null)
+      }
+    }
+    setDragId(null)
+    setDropIndex(null)
+  }, [dragId, dropIndex, layers, reorderLayers])
+
+  const handleDragEnd = useCallback(() => {
+    setDragId(null)
+    setDropIndex(null)
+  }, [])
+
   return (
     <div className="flex h-full min-w-0 flex-col">
       <div className="flex shrink-0 items-center justify-between border-b p-2">
@@ -32,8 +69,24 @@ export function LayersPanel() {
       </div>
       <ScrollArea className="flex-1 p-2">
         <div className="flex flex-col-reverse gap-1">
-          {layers.map((layer) => (
-            <LayerItem key={layer.id} layerId={layer.id} />
+          {layers.map((layer, i) => (
+            <div
+              key={layer.id}
+              draggable
+              onDragStart={() => handleDragStart(layer.id)}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
+              className="relative"
+            >
+              {dropIndex === i && dragId !== null && dragId !== layer.id && (
+                <div className="absolute inset-x-0 bottom-0 z-10 h-0.5 bg-blue-500" />
+              )}
+              {dropIndex === i + 1 && dragId !== null && dragId !== layer.id && (
+                <div className="absolute inset-x-0 top-0 z-10 h-0.5 bg-blue-500" />
+              )}
+              <LayerItem layerId={layer.id} />
+            </div>
           ))}
         </div>
         {layers.length === 0 && (
