@@ -81,6 +81,23 @@ async function exportCanvasWasm(options: ExportOptions): Promise<void> {
     pixelArrays.push(pixels)
     totalPixelSize += pixelLength
 
+    // Extract mask pixels if present
+    let maskPixelOffset = -1
+    let maskPixelLength = 0
+    let maskWidth = 0
+    let maskHeight = 0
+    let maskInverted = 0
+    if (layer.mask?.imageBitmap) {
+      const maskPixels = extractPixels(layer.mask.imageBitmap)
+      maskPixelOffset = totalPixelSize
+      maskPixelLength = maskPixels.length
+      maskWidth = layer.mask.width
+      maskHeight = layer.mask.height
+      maskInverted = layer.mask.inverted ? 1 : 0
+      pixelArrays.push(maskPixels)
+      totalPixelSize += maskPixelLength
+    }
+
     if (layer.type === 'image') {
       meta.push(
         layer.width,
@@ -94,6 +111,11 @@ async function exportCanvasWasm(options: ExportOptions): Promise<void> {
         blendModeIndex[layer.blendMode],
         pixelOffset,
         pixelLength,
+        maskPixelOffset,
+        maskPixelLength,
+        maskWidth,
+        maskHeight,
+        maskInverted,
       )
     } else {
       meta.push(
@@ -108,6 +130,11 @@ async function exportCanvasWasm(options: ExportOptions): Promise<void> {
         blendModeIndex[layer.blendMode],
         pixelOffset,
         pixelLength,
+        maskPixelOffset,
+        maskPixelLength,
+        maskWidth,
+        maskHeight,
+        maskInverted,
       )
     }
   }

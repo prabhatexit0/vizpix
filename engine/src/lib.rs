@@ -112,7 +112,7 @@ pub fn composite_and_export(
         buf[off + 3] = 255;
     }
 
-    let meta_per_layer = 11;
+    let meta_per_layer = 16;
     let num_layers = layers_meta.len() / meta_per_layer;
     let cx = canvas_width as f64 / 2.0;
     let cy = canvas_height as f64 / 2.0;
@@ -130,6 +130,23 @@ pub fn composite_and_export(
         let blend_mode = m[8] as u32;
         let pix_offset = m[9] as usize;
         let pix_length = m[10] as usize;
+        let mask_pix_offset = m[11] as i64;
+        let mask_pix_length = m[12] as usize;
+        let mask_w = m[13] as usize;
+        let mask_h = m[14] as usize;
+        let mask_inverted = m[15] as u32 != 0;
+
+        let has_mask = mask_pix_offset >= 0
+            && mask_pix_length > 0
+            && (mask_pix_offset as usize) + mask_pix_length <= layers_pixels.len();
+        let mask_data: Option<&[u8]> = if has_mask {
+            Some(
+                &layers_pixels
+                    [mask_pix_offset as usize..(mask_pix_offset as usize) + mask_pix_length],
+            )
+        } else {
+            None
+        };
 
         if pix_offset + pix_length > layers_pixels.len() {
             continue;
@@ -200,7 +217,33 @@ pub fn composite_and_export(
                 let sr = layer_data[src_idx] as f32 / 255.0;
                 let sg = layer_data[src_idx + 1] as f32 / 255.0;
                 let sb = layer_data[src_idx + 2] as f32 / 255.0;
-                let sa = (layer_data[src_idx + 3] as f32 / 255.0) * opacity;
+                let mut sa = (layer_data[src_idx + 3] as f32 / 255.0) * opacity;
+
+                // Apply mask if present
+                if let Some(md) = mask_data {
+                    // Mask is centered in the document
+                    let mask_ox = (cw as isize - mask_w as isize) / 2;
+                    let mask_oy = (ch as isize - mask_h as isize) / 2;
+                    let mx = px as isize - mask_ox;
+                    let my = py as isize - mask_oy;
+                    let mask_alpha =
+                        if mx >= 0 && my >= 0 && (mx as usize) < mask_w && (my as usize) < mask_h {
+                            let mi = (my as usize * mask_w + mx as usize) * 4;
+                            if mi + 3 < md.len() {
+                                md[mi + 3] as f32 / 255.0
+                            } else {
+                                0.0
+                            }
+                        } else {
+                            0.0
+                        };
+                    let effective = if mask_inverted {
+                        1.0 - mask_alpha
+                    } else {
+                        mask_alpha
+                    };
+                    sa *= effective;
+                }
 
                 if sa <= 0.0 {
                     continue;
