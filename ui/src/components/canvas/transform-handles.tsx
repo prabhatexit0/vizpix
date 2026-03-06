@@ -10,6 +10,7 @@ interface TransformHandlesProps {
 }
 
 const HANDLE_SIZE = 10
+const HIT_AREA = 20
 
 const CORNER_CURSORS = ['nwse-resize', 'nesw-resize', 'nwse-resize', 'nesw-resize']
 const MID_CURSORS = ['ns-resize', 'ew-resize', 'ns-resize', 'ew-resize']
@@ -53,6 +54,10 @@ interface DragState {
 export function TransformHandles({ canvasRef, layerId, viewport }: TransformHandlesProps) {
   const layer = useEditorStore((s) => findLayerById(s.layers, layerId))
   const dragRef = useRef<DragState | null>(null)
+  const [draggingHandle, setDraggingHandle] = useState<{
+    type: 'corner' | 'mid'
+    index: number
+  } | null>(null)
 
   const [canvasRect, setCanvasRect] = useState<{ width: number; height: number } | null>(null)
 
@@ -125,6 +130,7 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
         initialBoxWidth: isText ? layer.boxWidth : null,
         initialBoxHeight: isText ? layer.boxHeight : 'auto',
       }
+      setDraggingHandle({ type: handleType, index: handleIndex })
 
       const onDocPointerMove = (ev: PointerEvent) => {
         const drag = dragRef.current
@@ -249,6 +255,7 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
 
       const onDocPointerUp = () => {
         dragRef.current = null
+        setDraggingHandle(null)
         document.removeEventListener('pointermove', onDocPointerMove)
         document.removeEventListener('pointerup', onDocPointerUp)
       }
@@ -267,6 +274,15 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
   })
 
   const half = HANDLE_SIZE / 2
+  const hitPad = (HIT_AREA - HANDLE_SIZE) / 2
+
+  const isActive = (type: 'corner' | 'mid', index: number) =>
+    draggingHandle?.type === type && draggingHandle.index === index
+
+  const handleOpacity = (type: 'corner' | 'mid', index: number) => {
+    if (!draggingHandle) return 1
+    return isActive(type, index) ? 1 : 0.5
+  }
 
   return (
     <svg className="pointer-events-none absolute inset-0 h-full w-full">
@@ -286,25 +302,25 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
           className="pointer-events-auto"
           style={{ cursor: CORNER_CURSORS[i] }}
           onPointerDown={(e) => onHandlePointerDown(e, 'corner', i)}
+          opacity={handleOpacity('corner', i)}
         >
+          {/* Invisible hit area (20px) */}
+          <rect
+            x={c.x - half - hitPad}
+            y={c.y - half - hitPad}
+            width={HIT_AREA}
+            height={HIT_AREA}
+            fill="transparent"
+          />
           <rect
             x={c.x - half}
             y={c.y - half}
             width={HANDLE_SIZE}
             height={HANDLE_SIZE}
             rx={2}
-            fill="white"
+            fill={isActive('corner', i) ? '#3b82f6' : 'white'}
             stroke="#3b82f6"
             strokeWidth={1.5}
-            className="origin-center transition-transform hover:scale-125"
-          />
-          {/* Larger invisible hit area for easier grabbing */}
-          <rect
-            x={c.x - half - 4}
-            y={c.y - half - 4}
-            width={HANDLE_SIZE + 8}
-            height={HANDLE_SIZE + 8}
-            fill="transparent"
           />
         </g>
       ))}
@@ -315,24 +331,24 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
           className="pointer-events-auto"
           style={{ cursor: MID_CURSORS[i] }}
           onPointerDown={(e) => onHandlePointerDown(e, 'mid', i)}
+          opacity={handleOpacity('mid', i)}
         >
+          <rect
+            x={m.x - half - hitPad}
+            y={m.y - half - hitPad}
+            width={HIT_AREA}
+            height={HIT_AREA}
+            fill="transparent"
+          />
           <rect
             x={m.x - half}
             y={m.y - half}
             width={HANDLE_SIZE}
             height={HANDLE_SIZE}
             rx={2}
-            fill="white"
+            fill={isActive('mid', i) ? '#3b82f6' : 'white'}
             stroke="#3b82f6"
             strokeWidth={1.5}
-            className="origin-center transition-transform hover:scale-125"
-          />
-          <rect
-            x={m.x - half - 4}
-            y={m.y - half - 4}
-            width={HANDLE_SIZE + 8}
-            height={HANDLE_SIZE + 8}
-            fill="transparent"
           />
         </g>
       ))}
