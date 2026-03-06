@@ -179,6 +179,21 @@ function computeDrawRect(
 
 const MIN_DRAW_SIZE = 4
 
+interface TouchPointer {
+  x: number
+  y: number
+}
+
+function pointerDistance(a: TouchPointer, b: TouchPointer): number {
+  const dx = a.x - b.x
+  const dy = a.y - b.y
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+function pointerMidpoint(a: TouchPointer, b: TouchPointer): TouchPointer {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+}
+
 export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
   const ptrRef = useRef<PointerState>({
     down: false,
@@ -194,6 +209,10 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
   const drawPreviewRef = useRef<DrawPreview | null>(null)
   const lastClickRef = useRef<{ time: number; layerId: string | null }>({ time: 0, layerId: null })
 
+  // Multi-touch tracking for pinch-to-zoom
+  const touchPointersRef = useRef<Map<number, TouchPointer>>(new Map())
+  const lastPinchDistRef = useRef<number | null>(null)
+
   const getEffectiveTool = useCallback((): ToolMode => {
     if (tempHandRef.current) return 'hand'
     return useEditorStore.getState().activeTool
@@ -204,6 +223,19 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
       const canvas = canvasRef.current
       if (!canvas) return
       canvas.setPointerCapture(e.pointerId)
+
+      // Track touch pointers for multi-touch gestures
+      if (e.pointerType === 'touch') {
+        touchPointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        if (touchPointersRef.current.size === 2) {
+          const [a, b] = [...touchPointersRef.current.values()]
+          lastPinchDistRef.current = pointerDistance(a, b)
+          // Cancel any single-pointer drag in progress
+          ptrRef.current.down = false
+          return
+        }
+        if (touchPointersRef.current.size > 2) return
+      }
 
       const ptr = ptrRef.current
       ptr.down = true
@@ -288,10 +320,29 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
-      const ptr = ptrRef.current
-      if (!ptr.down) return
       const canvas = canvasRef.current
       if (!canvas) return
+
+      // Handle multi-touch pinch-to-zoom
+      if (e.pointerType === 'touch' && touchPointersRef.current.has(e.pointerId)) {
+        touchPointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        if (touchPointersRef.current.size === 2 && lastPinchDistRef.current !== null) {
+          const [a, b] = [...touchPointersRef.current.values()]
+          const dist = pointerDistance(a, b)
+          const factor = dist / lastPinchDistRef.current
+          lastPinchDistRef.current = dist
+
+          const mid = pointerMidpoint(a, b)
+          const rect = canvas.getBoundingClientRect()
+          const centerX = mid.x - rect.left - rect.width / 2
+          const centerY = mid.y - rect.top - rect.height / 2
+          useEditorStore.getState().zoom(factor, centerX, centerY)
+          return
+        }
+      }
+
+      const ptr = ptrRef.current
+      if (!ptr.down) return
 
       const dx = e.clientX - ptr.lastX
       const dy = e.clientY - ptr.lastY
@@ -329,6 +380,14 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
     (e: React.PointerEvent) => {
       const canvas = canvasRef.current
       if (canvas) canvas.releasePointerCapture(e.pointerId)
+
+      // Clean up touch pointer tracking
+      if (e.pointerType === 'touch') {
+        touchPointersRef.current.delete(e.pointerId)
+        if (touchPointersRef.current.size < 2) {
+          lastPinchDistRef.current = null
+        }
+      }
 
       const tool = getEffectiveTool()
 
