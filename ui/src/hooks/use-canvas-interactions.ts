@@ -209,9 +209,10 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
   const drawPreviewRef = useRef<DrawPreview | null>(null)
   const lastClickRef = useRef<{ time: number; layerId: string | null }>({ time: 0, layerId: null })
 
-  // Multi-touch tracking for pinch-to-zoom
+  // Multi-touch tracking for pinch-to-zoom and two-finger pan
   const touchPointersRef = useRef<Map<number, TouchPointer>>(new Map())
   const lastPinchDistRef = useRef<number | null>(null)
+  const lastPinchMidRef = useRef<TouchPointer | null>(null)
 
   const getEffectiveTool = useCallback((): ToolMode => {
     if (tempHandRef.current) return 'hand'
@@ -230,6 +231,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
         if (touchPointersRef.current.size === 2) {
           const [a, b] = [...touchPointersRef.current.values()]
           lastPinchDistRef.current = pointerDistance(a, b)
+          lastPinchMidRef.current = pointerMidpoint(a, b)
           // Cancel any single-pointer drag in progress
           ptrRef.current.down = false
           return
@@ -323,7 +325,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
       const canvas = canvasRef.current
       if (!canvas) return
 
-      // Handle multi-touch pinch-to-zoom
+      // Handle multi-touch pinch-to-zoom and two-finger pan
       if (e.pointerType === 'touch' && touchPointersRef.current.has(e.pointerId)) {
         touchPointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
         if (touchPointersRef.current.size === 2 && lastPinchDistRef.current !== null) {
@@ -337,6 +339,14 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
           const centerX = mid.x - rect.left - rect.width / 2
           const centerY = mid.y - rect.top - rect.height / 2
           useEditorStore.getState().zoom(factor, centerX, centerY)
+
+          // Two-finger pan: track midpoint movement
+          if (lastPinchMidRef.current) {
+            const panDx = mid.x - lastPinchMidRef.current.x
+            const panDy = mid.y - lastPinchMidRef.current.y
+            useEditorStore.getState().pan(panDx, panDy)
+          }
+          lastPinchMidRef.current = mid
           return
         }
       }
@@ -386,6 +396,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
         touchPointersRef.current.delete(e.pointerId)
         if (touchPointersRef.current.size < 2) {
           lastPinchDistRef.current = null
+          lastPinchMidRef.current = null
         }
       }
 
