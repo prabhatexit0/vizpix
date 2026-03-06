@@ -230,7 +230,7 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
       textAlign: 'left',
       lineHeight: 1.4,
       letterSpacing: 0,
-      maxWidth: rect ? Math.abs(rect.width) : null,
+      maxWidth: rect && rect.width > 0 ? Math.abs(rect.width) : null,
       visible: true,
       opacity: 1,
       blendMode: 'normal',
