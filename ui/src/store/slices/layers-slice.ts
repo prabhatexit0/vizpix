@@ -65,7 +65,24 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
     })
   },
 
-  setActiveLayer: (id) => set({ activeLayerId: id }),
+  setActiveLayer: (id) => {
+    const { editingTextLayerId } = get()
+    if (editingTextLayerId && editingTextLayerId !== id) {
+      // Commit text editing: clear editing state and delete empty text layers
+      const editingLayer = findLayerById(get().layers, editingTextLayerId)
+      if (editingLayer?.type === 'text' && !editingLayer.content) {
+        set({
+          layers: removeLayerFromTree(get().layers, editingTextLayerId),
+          activeLayerId: id,
+          editingTextLayerId: null,
+        })
+        return
+      }
+      set({ activeLayerId: id, editingTextLayerId: null })
+      return
+    }
+    set({ activeLayerId: id })
+  },
 
   toggleVisibility: (id) => {
     set((s) => ({
