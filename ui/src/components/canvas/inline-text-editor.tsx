@@ -147,6 +147,16 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
           commit()
         }
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault()
+        const ta = textareaRef.current
+        if (ta) {
+          ta.selectionStart = 0
+          ta.selectionEnd = ta.value.length
+          setCursorIndex(0)
+          setSelectionEnd(ta.value.length)
+        }
+      }
     },
     [commit, layerId, removeLayer, setActiveTool, setEditingTextLayerId],
   )
