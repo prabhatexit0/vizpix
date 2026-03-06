@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, useEffect } from 'react'
 import { useEditorStore } from '@/store'
 import { Slider } from '@/components/ui/slider'
 import { Button } from '@/components/ui/button'
@@ -79,6 +79,20 @@ export function AdjustPanel() {
   const [values, setValues] = useState<AdjustValues>(DEFAULTS)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const baseRef = useRef<Uint8Array | null>(null)
+  const activeLayerIdRef = useRef(activeLayerId)
+
+  // When activeLayerId changes, cancel pending debounce and re-capture base
+  useEffect(() => {
+    activeLayerIdRef.current = activeLayerId
+    clearTimeout(debounceRef.current)
+    baseRef.current = null
+    setValues(DEFAULTS)
+  }, [activeLayerId])
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current)
+  }, [])
 
   const getBase = useCallback(() => {
     if (!baseRef.current && layer) {
@@ -90,7 +104,10 @@ export function AdjustPanel() {
   const applyAdjust = useCallback(
     async (adj: AdjustValues) => {
       const base = getBase()
-      if (!base || !activeLayerId) return
+      const targetLayerId = activeLayerIdRef.current
+      if (!base || !targetLayerId) return
+
+      if (useEditorStore.getState().processing) return
 
       const hasColorAdj = adj.brightness !== 0 || adj.contrast !== 0 || adj.saturation !== 0
       const hasBlur = adj.blur > 0
@@ -122,12 +139,15 @@ export function AdjustPanel() {
           result = quantize_colors(result, adj.posterize)
         }
 
-        await applyWasmToLayer(activeLayerId, result)
+        // Only apply if the layer hasn't changed during processing
+        if (activeLayerIdRef.current === targetLayerId) {
+          await applyWasmToLayer(targetLayerId, result)
+        }
       } finally {
         setProcessing(false)
       }
     },
-    [activeLayerId, applyWasmToLayer, getBase, setProcessing],
+    [applyWasmToLayer, getBase, setProcessing],
   )
 
   const handleChange = useCallback(
