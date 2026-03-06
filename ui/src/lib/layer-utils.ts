@@ -134,7 +134,7 @@ function getGroupBounds(group: GroupLayer): { width: number; height: number } {
 export function measureCursorPosition(
   layer: Layer & { type: 'text' },
   cursorIndex: number,
-): { localX: number; localY: number } {
+): { localX: number; localY: number; fontSize: number; lineHeight: number } {
   const layout = layoutTextRuns(layer)
   const totalHeight = getTotalHeight(layout)
 
@@ -155,9 +155,14 @@ export function measureCursorPosition(
   const ctx = canvas.getContext('2d')!
   let cursorW = 0
   let remaining = cursorIndex - line.startOffset
+  let cursorFontSize = layer.fontSize
 
   for (const seg of line.segments) {
-    if (remaining <= 0) break
+    if (remaining <= 0) {
+      cursorFontSize = seg.fontSize
+      break
+    }
+    cursorFontSize = seg.fontSize
     const charsInSeg = Math.min(remaining, seg.text.length)
     ctx.font = seg.font
     if ('letterSpacing' in ctx) {
@@ -189,7 +194,7 @@ export function measureCursorPosition(
   const yStart = -totalHeight / 2
   const localY = yStart + line.yOffset
 
-  return { localX, localY }
+  return { localX, localY, fontSize: cursorFontSize, lineHeight: line.lineHeight }
 }
 
 /**

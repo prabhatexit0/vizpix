@@ -188,7 +188,7 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     const screenX = worldX + lx * cos - ly * sin
     const screenY = worldY + lx * sin + ly * cos
 
-    const caretH = layer.fontSize * Math.abs(scaleY) * zoom
+    const caretH = pos.fontSize * Math.abs(scaleY) * zoom
 
     let color = '#ffffff'
     if (layer.fill.type === 'solid') color = layer.fill.color
@@ -222,8 +222,6 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     const sin = Math.sin(rad)
     const worldX = cx + x * zoom
     const worldY = cy + y * zoom
-    const lineH = layer.fontSize * layer.lineHeight
-
     const rects: Array<{ x: number; y: number; w: number; h: number; rotation: number }> = []
 
     for (let i = start; i < end; ) {
@@ -240,6 +238,8 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
         Math.abs(endPos.localY - startPos.localY) < 1
           ? endPos
           : measureCursorPosition(layer, lineEnd - 1)
+
+      const lineH = startPos.lineHeight
 
       const lx1 = startPos.localX * scaleX * zoom
       const ly1 = startPos.localY * scaleY * zoom
