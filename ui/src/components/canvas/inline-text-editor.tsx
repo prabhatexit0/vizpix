@@ -32,6 +32,7 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     return found?.type === 'text' ? found.content : ''
   })
   const [cursorIndex, setCursorIndex] = useState(initialContent.length)
+  const [selectionEnd, setSelectionEnd] = useState(initialContent.length)
   const [canvasRect, setCanvasRect] = useState<{ width: number; height: number } | null>(null)
 
   // Track canvas size
@@ -67,6 +68,7 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
 
       const idx = findCursorIndexFromLocal(layer, localX, localY)
       setCursorIndex(idx)
+      setSelectionEnd(idx)
       const ta = textareaRef.current
       if (ta) {
         ta.selectionStart = idx
@@ -106,12 +108,14 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
 
     updateTextProperties(layerId, { content: ta.value })
     setCursorIndex(ta.selectionStart ?? 0)
+    setSelectionEnd(ta.selectionEnd ?? ta.selectionStart ?? 0)
   }, [layer, layerId, updateTextProperties, pushSnapshot])
 
   const onSelect = useCallback(() => {
     const ta = textareaRef.current
     if (!ta) return
     setCursorIndex(ta.selectionStart ?? 0)
+    setSelectionEnd(ta.selectionEnd ?? ta.selectionStart ?? 0)
   }, [])
 
   const removeLayer = useEditorStore((s) => s.removeLayer)
@@ -181,6 +185,62 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     }
   }, [layer, canvasRect, viewport, cursorIndex])
 
+  const selectionHighlights = useMemo(() => {
+    if (!layer || !canvasRect || cursorIndex === selectionEnd) return null
+
+    const start = Math.min(cursorIndex, selectionEnd)
+    const end = Math.max(cursorIndex, selectionEnd)
+
+    const cx = canvasRect.width / 2 + viewport.panX
+    const cy = canvasRect.height / 2 + viewport.panY
+    const { x, y, scaleX, scaleY, rotation } = layer.transform
+    const zoom = viewport.zoom
+    const rad = (rotation * Math.PI) / 180
+    const cos = Math.cos(rad)
+    const sin = Math.sin(rad)
+    const worldX = cx + x * zoom
+    const worldY = cy + y * zoom
+    const lineH = layer.fontSize * layer.lineHeight
+
+    const rects: Array<{ x: number; y: number; w: number; h: number; rotation: number }> = []
+
+    for (let i = start; i < end; ) {
+      const startPos = measureCursorPosition(layer, i)
+      // Find the end of the current line or selection end
+      let lineEnd = i + 1
+      while (lineEnd < end) {
+        const nextPos = measureCursorPosition(layer, lineEnd)
+        if (Math.abs(nextPos.localY - startPos.localY) > 1) break
+        lineEnd++
+      }
+      const endPos = measureCursorPosition(layer, lineEnd)
+      const sameLineEnd =
+        Math.abs(endPos.localY - startPos.localY) < 1
+          ? endPos
+          : measureCursorPosition(layer, lineEnd - 1)
+
+      const lx1 = startPos.localX * scaleX * zoom
+      const ly1 = startPos.localY * scaleY * zoom
+      const lx2 =
+        (Math.abs(sameLineEnd.localY - startPos.localY) < 1
+          ? sameLineEnd.localX
+          : startPos.localX) *
+        scaleX *
+        zoom
+      const ly2 = ly1 + lineH * scaleY * zoom
+
+      const sx = worldX + lx1 * cos - ly1 * sin
+      const sy = worldY + lx1 * sin + ly1 * cos
+      const w = lx2 - lx1
+      const h = ly2 - ly1
+
+      rects.push({ x: sx, y: sy, w: Math.abs(w), h: Math.abs(h), rotation })
+      i = lineEnd
+    }
+
+    return rects
+  }, [layer, canvasRect, viewport, cursorIndex, selectionEnd])
+
   const boundingBox = useMemo(() => {
     if (!layer || !canvasRect) return null
 
@@ -244,6 +304,23 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
             strokeWidth={boundingBox.strokeWidth}
             strokeDasharray="6 3"
           />
+        </svg>
+      )}
+      {/* Selection highlights */}
+      {selectionHighlights && (
+        <svg className="pointer-events-none absolute inset-0 h-full w-full">
+          {selectionHighlights.map((r, i) => (
+            <rect
+              key={i}
+              x={r.x}
+              y={r.y}
+              width={r.w}
+              height={r.h}
+              fill="#3b82f6"
+              opacity={0.3}
+              transform={`rotate(${r.rotation} ${r.x} ${r.y})`}
+            />
+          ))}
         </svg>
       )}
       {/* Blinking caret overlay */}
