@@ -29,6 +29,23 @@ export function PropertiesPanel() {
   const removeLayerMask = useEditorStore((s) => s.removeLayerMask)
   const invertLayerMask = useEditorStore((s) => s.invertLayerMask)
 
+  const clampedUpdate = useCallback(
+    (
+      fn: (id: string, val: Record<string, unknown>) => void,
+      id: string,
+      key: string,
+      raw: string,
+      min?: number,
+      max?: number,
+    ) => {
+      const n = Number(raw)
+      if (Number.isNaN(n)) return
+      const clamped = Math.max(min ?? -Infinity, Math.min(max ?? Infinity, n))
+      fn(id, { [key]: clamped })
+    },
+    [],
+  )
+
   const [histogram, setHistogram] = useState<HistogramData | null>(null)
   const [histBytesRef, setHistBytesRef] = useState<Uint8Array | null>(null)
 
@@ -108,8 +125,15 @@ export function PropertiesPanel() {
           <Input
             type="number"
             step={0.01}
+            min={0.01}
             value={transform.scaleX.toFixed(2)}
-            onChange={(e) => setTransform(activeLayerId, { scaleX: Number(e.target.value) })}
+            onChange={(e) =>
+              clampedUpdate(setTransform, activeLayerId, 'scaleX', e.target.value, 0.01)
+            }
+            onBlur={(e) => {
+              const n = Number(e.target.value)
+              if (Number.isNaN(n) || n < 0.01) setTransform(activeLayerId, { scaleX: 0.01 })
+            }}
             className="h-8 text-xs"
           />
         </div>
@@ -120,8 +144,15 @@ export function PropertiesPanel() {
           <Input
             type="number"
             step={0.01}
+            min={0.01}
             value={transform.scaleY.toFixed(2)}
-            onChange={(e) => setTransform(activeLayerId, { scaleY: Number(e.target.value) })}
+            onChange={(e) =>
+              clampedUpdate(setTransform, activeLayerId, 'scaleY', e.target.value, 0.01)
+            }
+            onBlur={(e) => {
+              const n = Number(e.target.value)
+              if (Number.isNaN(n) || n < 0.01) setTransform(activeLayerId, { scaleY: 0.01 })
+            }}
             className="h-8 text-xs"
           />
         </div>
@@ -134,8 +165,11 @@ export function PropertiesPanel() {
         </label>
         <Input
           type="number"
-          value={Math.round(transform.rotation)}
-          onChange={(e) => setTransform(activeLayerId, { rotation: Number(e.target.value) })}
+          value={Math.round(((transform.rotation % 360) + 360) % 360)}
+          onChange={(e) => {
+            const n = Number(e.target.value)
+            if (!Number.isNaN(n)) setTransform(activeLayerId, { rotation: n })
+          }}
           className="h-8 text-xs"
         />
       </div>
@@ -150,7 +184,7 @@ export function PropertiesPanel() {
           min={0}
           max={100}
           step={1}
-          onValueChange={([v]) => setOpacity(activeLayerId, v / 100)}
+          onValueChange={([v]) => setOpacity(activeLayerId, Math.max(0, Math.min(100, v)) / 100)}
         />
       </div>
 
@@ -195,10 +229,15 @@ export function PropertiesPanel() {
               </label>
               <Input
                 type="number"
+                min={1}
                 value={layer.width}
                 onChange={(e) =>
-                  updateShapeProperties(activeLayerId, { width: Number(e.target.value) })
+                  clampedUpdate(updateShapeProperties, activeLayerId, 'width', e.target.value, 1)
                 }
+                onBlur={(e) => {
+                  const n = Number(e.target.value)
+                  if (Number.isNaN(n) || n < 1) updateShapeProperties(activeLayerId, { width: 1 })
+                }}
                 className="h-8 text-xs"
               />
             </div>
@@ -208,10 +247,15 @@ export function PropertiesPanel() {
               </label>
               <Input
                 type="number"
+                min={1}
                 value={layer.height}
                 onChange={(e) =>
-                  updateShapeProperties(activeLayerId, { height: Number(e.target.value) })
+                  clampedUpdate(updateShapeProperties, activeLayerId, 'height', e.target.value, 1)
                 }
+                onBlur={(e) => {
+                  const n = Number(e.target.value)
+                  if (Number.isNaN(n) || n < 1) updateShapeProperties(activeLayerId, { height: 1 })
+                }}
                 className="h-8 text-xs"
               />
             </div>
