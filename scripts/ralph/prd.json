@@ -206,7 +206,7 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": "A visual rotation dial gives immediate spatial feedback about the current angle. The dial is small and complementary to the numeric input. Use Math.atan2(dy, dx) from the dial center to compute the angle from pointer position."
     }
   ]

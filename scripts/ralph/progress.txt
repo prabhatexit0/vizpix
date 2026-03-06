@@ -16,6 +16,45 @@ Started: Sat Mar  7 04:00:53 IST 2026
 - Browser-tested: all inputs render correctly with proper values
 - Typecheck + lint passes
 
+## US-512: Add rotation dial (DONE)
+- Created `ui/src/components/ui/rotation-dial.tsx` — 32x32 SVG circular control
+- Dot indicates current angle, drag to rotate, Shift snaps to 15deg
+- Integrated next to rotation ScrubInput in properties panel
+- Browser-tested: dial renders correctly
+- Typecheck + lint passes
+
+## US-511: Improve adjust panel sliders (DONE)
+- Replaced all Slider with SliderInput in adjust-panel.tsx
+- Labels are scrubbable, values are editable
+- Double-click any slider area to reset to default
+- Removed unused format property from SliderDef
+- Typecheck + lint passes
+
+## US-510: Add dimension inputs with constrain toggle (DONE)
+- Replaced read-only W/H with ScrubInput showing actual pixel dimensions
+- Added link/unlink toggle between W and H for proportional constraint
+- Constraint state per-session (useState), not per-layer
+- Removed unused clampedUpdate helper
+- Typecheck + lint passes
+
+## US-509: Input focus management (DONE)
+- Select-all-on-focus: ScrubInput uses select() in rAF, SliderInput uses e.target.select()
+- Tab/Shift+Tab: native browser behavior between input elements
+- Double-click on input: only selects text, scrubbing is only on labels
+- No additional code changes needed — requirements met by existing ScrubInput/SliderInput
+
+## US-508: Improve color picker (DONE)
+- Created `ui/src/components/ui/color-picker.tsx` with HSV popover
+- SV plane, hue slider, hex input, 10 preset swatches
+- Replaced native <input type=color> in shape fill, stroke color, text color
+- Browser-tested: swatches render correctly
+- Typecheck + lint passes
+
+## US-507: Add SliderInput for stroke width (DONE)
+- Replaced stroke width plain input with SliderInput (0-50px, step 0.5)
+- Separated stroke color to its own row
+- Typecheck + lint passes
+
 ## US-506: Add ScrubInput for text properties (DONE)
 - Replaced font size, line height, letter spacing with ScrubInput
 - Selection-aware font size uses updateTextProp
