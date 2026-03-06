@@ -1,0 +1,189 @@
+{
+  "project": "VizPix",
+  "branchName": "ralph/ux-visual-polish",
+  "description": "Visual UX polish pass with browser-verified fixes. Every change must be visually verified via the browser test helper before committing.",
+  "userStories": [
+    {
+      "id": "US-301",
+      "title": "Fix double-click text creation positioning \u2014 text appears outside document",
+      "description": "As a user, I want double-clicking the canvas to create text AT the click position within the document, not above it.",
+      "acceptanceCriteria": [
+        "In use-canvas-interactions.ts, the double-click-to-create-text code at the empty canvas branch passes correct world coordinates to addTextLayer",
+        "The text layer should appear centered on where the user double-clicked",
+        "Verify by running: browser-test.ts create-text \u2014 the text should be visible on the white document area, not above it",
+        "The Y coordinate in properties panel should be a reasonable number (not -500+)",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Fixed: clamped text position to document bounds with padding, fixed text tool click to use click position, and made properties panel show document-relative coordinates."
+    },
+    {
+      "id": "US-302",
+      "title": "Fix SVG overlay intercepting canvas pointer events",
+      "description": "As a user, I want to click/double-click on the canvas without SVG overlays blocking my clicks.",
+      "acceptanceCriteria": [
+        "All SVG overlays (SelectionOutline, TransformHandles, DrawPreviewOverlay, InlineTextEditor bounding box) must have pointer-events:none on the SVG container",
+        "Individual interactive elements within TransformHandles (the draggable handle rects) should have pointer-events:auto",
+        "Non-interactive elements (selection outline polygon, bounding box, selection highlights) must have pointer-events:none",
+        "Verify by running: browser-test.ts investigate \u2014 double-click to edit text should work without { force: true }",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Fixed: hidden TransformHandles during text editing, added double-click forwarding in handles, explicit pointer-events=none on non-interactive elements."
+    },
+    {
+      "id": "US-303",
+      "title": "Fix text layer thumbnail \u2014 shows garbled text, needs proper scaling",
+      "description": "As a user, I want text layer thumbnails in the layers panel to show a readable preview of the text.",
+      "acceptanceCriteria": [
+        "Text thumbnail should show the first few characters of text content clearly readable in 32x32",
+        "For short text, scale to fit the width. For long text, clip with ellipsis or just show beginning",
+        "Background should contrast with text color (light bg for dark text, dark bg for light text)",
+        "Verify by running: browser-test.ts investigate \u2014 check screenshot 04-layers-tab for readable thumbnails",
+        "Empty text layers show the Type icon, not blank canvas",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Fixed: custom text thumbnail rendering at 11px with clipping and contrast background."
+    },
+    {
+      "id": "US-304",
+      "title": "Add selection outline to selected layers on canvas",
+      "description": "As a user, I want to see which layer is selected on the canvas with a clear outline.",
+      "acceptanceCriteria": [
+        "When a layer is selected, show a blue outline around its bounds on the canvas",
+        "The outline should be visible regardless of zoom level (stroke width adjusts for zoom)",
+        "The outline should NOT appear during inline text editing (the bounding box handles that)",
+        "Verify by running: browser-test.ts create-shape \u2014 selected rectangle should have a visible outline",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Fixed: increased stroke width/opacity, hidden during text editing."
+    },
+    {
+      "id": "US-305",
+      "title": "Improve toolbar visual hierarchy and spacing",
+      "description": "As a user, I want the toolbar to clearly show tool groups and the active tool.",
+      "acceptanceCriteria": [
+        "Active tool has a stronger visual indicator \u2014 solid blue background, not subtle",
+        "DRAW section label is more visible (current DRAW text is very faint)",
+        "Add a visual separator between pointer tools (pointer/hand/zoom/crop) and draw tools (rect/ellipse/text)",
+        "Add a visual separator between draw tools and action buttons (group/save/undo/redo)",
+        "Verify by running: browser-test.ts screenshot \u2014 toolbar should have clear visual grouping",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Fixed: solid blue active tool, visible DRAW label, reorganized button groups."
+    },
+    {
+      "id": "US-306",
+      "title": "Fix canvas area not filling available space on initial load",
+      "description": "As a user, I want the document to be centered and fit the available canvas area on first load.",
+      "acceptanceCriteria": [
+        "After creating a new canvas or loading a document, call fitToDocument to center and zoom the document to fit",
+        "The document should be visible with some padding around it, not cropped or too small",
+        "Verify by running: browser-test.ts screenshot \u2014 the white document should be nicely centered with visible checkerboard around all edges",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Fixed: double rAF ensures layout is settled before fitToDocument."
+    },
+    {
+      "id": "US-307",
+      "title": "Add empty state for adjust panel when no image layer is selected",
+      "description": "As a user, I want the adjust panel to tell me what to do when no image layer is selected.",
+      "acceptanceCriteria": [
+        "When no layer is selected, show 'Select an image layer to adjust'",
+        "When a non-image layer is selected (text, shape, group), show 'Adjustments are only available for image layers'",
+        "When an image layer is selected, show the adjustment sliders (current behavior)",
+        "Verify by running: browser-test.ts investigate \u2014 check screenshot 06-adjust-tab",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Need to check what the adjust panel currently shows for non-image layers. It should have helpful empty states."
+    },
+    {
+      "id": "US-308",
+      "title": "Fix new canvas dialog \u2014 preview shows wrong aspect ratio",
+      "description": "As a user, I want the new canvas preview to accurately represent the document dimensions I chose.",
+      "acceptanceCriteria": [
+        "The preview rectangle in the new canvas dialog should match the aspect ratio of the selected dimensions",
+        "When dimensions change, the preview updates immediately",
+        "Standard presets show correct preview (1080x1080 = square, 1080x1920 = tall portrait, etc.)",
+        "Verify by running: browser-test.ts screenshot (on the initial new canvas screen)",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "From the initial screenshot, the preview area shows a white rectangle that doesn't match the 1920x1080 aspect ratio well."
+    },
+    {
+      "id": "US-309",
+      "title": "Add loading state for WASM initialization",
+      "description": "As a user, I want to see a loading indicator while WASM initializes, not a blank or broken screen.",
+      "acceptanceCriteria": [
+        "Show a spinner or loading text while wasmReady is false",
+        "The loading state should be in App.tsx or EditorLayout, gating the editor behind wasmReady",
+        "Once WASM is ready, show the editor immediately without flash",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "WASM initialization is async. If it takes time, the editor could show without WASM features working. Check App.tsx for how wasmReady is used."
+    },
+    {
+      "id": "US-310",
+      "title": "Fix properties panel input focus stealing keyboard shortcuts",
+      "description": "As a user, I want keyboard shortcuts to not trigger while I'm typing in a properties panel input.",
+      "acceptanceCriteria": [
+        "When a properties panel input is focused, typing 'r' should NOT switch to rectangle tool",
+        "When a properties panel input is focused, typing 'v' should NOT switch to pointer tool",
+        "In use-keyboard-shortcuts.ts, verify the tag check (INPUT/TEXTAREA/SELECT) properly guards ALL shortcuts",
+        "Also check that contentEditable elements are excluded",
+        "Verify: focus a numeric input in props panel, type numbers \u2014 only the input should change, not the tool",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "The tag check exists but might have edge cases. Some shortcuts may not be properly guarded. This is critical for usability \u2014 accidentally switching tools while editing a property value is very frustrating."
+    },
+    {
+      "id": "US-311",
+      "title": "Add drag-to-reorder layers in layers panel",
+      "description": "As a user, I want to drag layers to reorder them in the layers panel.",
+      "acceptanceCriteria": [
+        "Each layer item in the layers panel should be draggable",
+        "Show a visual indicator (blue line between items) for the drop position",
+        "Dropping reorders via store.reorderLayers(layerId, newIndex)",
+        "Dragging should work for root-level layers (groups are stretch goal)",
+        "Verify by running: browser-test.ts investigate \u2014 create multiple layers and try reordering",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "The store has reorderLayers() but the UI has no drag-to-reorder. This is essential for a production editor. Use HTML5 drag and drop or pointer events."
+    },
+    {
+      "id": "US-312",
+      "title": "Add confirmation dialog for destructive actions",
+      "description": "As a user, I want a confirmation before deleting the last layer or clearing the canvas.",
+      "acceptanceCriteria": [
+        "Deleting the last remaining layer shows a confirmation dialog",
+        "The confirm dialog uses the existing ConfirmDialog component at components/dialogs/confirm-dialog.tsx",
+        "Deleting a non-last layer does NOT show confirmation (would be annoying)",
+        "Undo is available after deletion (already works via history)",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Currently Delete immediately removes the layer with no confirmation. Undo exists but a confirm for the last layer prevents accidental empty state."
+    }
+  ]
+}
