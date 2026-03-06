@@ -198,6 +198,52 @@ function pointerAngle(a: TouchPointer, b: TouchPointer): number {
   return Math.atan2(b.y - a.y, b.x - a.x) * (180 / Math.PI)
 }
 
+export interface ContextMenuState {
+  layerId: string
+  screenX: number
+  screenY: number
+}
+
+const TOUCH_HIT_EXPAND = 8
+
+function hitTestLayerWithPadding(
+  layer: Layer,
+  wx: number,
+  wy: number,
+  padding: number,
+): string | null {
+  // Try exact hit first
+  const exact = hitTestLayer(layer, wx, wy)
+  if (exact) return exact
+  if (padding <= 0) return null
+
+  // Try expanded area by testing surrounding points
+  const offsets = [
+    { dx: padding, dy: 0 },
+    { dx: -padding, dy: 0 },
+    { dx: 0, dy: padding },
+    { dx: 0, dy: -padding },
+    { dx: padding, dy: padding },
+    { dx: -padding, dy: padding },
+    { dx: padding, dy: -padding },
+    { dx: -padding, dy: -padding },
+  ]
+  for (const { dx, dy } of offsets) {
+    const hit = hitTestLayer(layer, wx + dx, wy + dy)
+    if (hit) return hit
+  }
+  return null
+}
+
+function hitTestLayersWithPadding(wx: number, wy: number, padding: number) {
+  const { layers } = useEditorStore.getState()
+  for (let i = layers.length - 1; i >= 0; i--) {
+    const hit = hitTestLayerWithPadding(layers[i], wx, wy, padding)
+    if (hit) return hit
+  }
+  return null
+}
+
 export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
   const ptrRef = useRef<PointerState>({
     down: false,
@@ -212,6 +258,8 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
   const tempHandRef = useRef(false)
   const drawPreviewRef = useRef<DrawPreview | null>(null)
   const lastClickRef = useRef<{ time: number; layerId: string | null }>({ time: 0, layerId: null })
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
 
   // Multi-touch tracking for pinch-to-zoom, two-finger pan, and rotation
   const touchPointersRef = useRef<Map<number, TouchPointer>>(new Map())
@@ -274,6 +322,15 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
         if (touchPointersRef.current.size > 2) return
       }
 
+      // Close context menu on any pointer down
+      if (contextMenu) setContextMenu(null)
+
+      // Clear any pending long-press
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+
       const ptr = ptrRef.current
       ptr.down = true
       ptr.startX = e.clientX
@@ -286,6 +343,9 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
       ptr.startWX = wx
       ptr.startWY = wy
 
+      const isTouch = e.pointerType === 'touch'
+      const hitPadding = isTouch ? TOUCH_HIT_EXPAND : 0
+
       const tool = getEffectiveTool()
 
       if (tool === 'pointer' || tool === 'crop') {
@@ -293,7 +353,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
 
         // While editing text, intercept clicks for cursor positioning
         if (editingTextLayerId) {
-          const hitId = hitTestLayers(wx, wy)
+          const hitId = hitTestLayersWithPadding(wx, wy, hitPadding)
           if (hitId === editingTextLayerId) {
             textCursorClickCallback?.(wx, wy)
             ptr.down = false
@@ -303,7 +363,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
           useEditorStore.getState().setEditingTextLayerId(null)
         }
 
-        const hitId = hitTestLayers(wx, wy)
+        const hitId = hitTestLayersWithPadding(wx, wy, hitPadding)
 
         // Double-click detection
         const now = Date.now()
@@ -338,6 +398,17 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
         lastClickRef.current = { time: now, layerId: hitId }
 
         useEditorStore.getState().setActiveLayer(hitId)
+
+        // Long-press for touch context menu (500ms)
+        if (isTouch && hitId) {
+          const screenX = e.clientX
+          const screenY = e.clientY
+          longPressTimerRef.current = setTimeout(() => {
+            longPressTimerRef.current = null
+            ptr.down = false
+            setContextMenu({ layerId: hitId, screenX, screenY })
+          }, 500)
+        }
       } else if (tool === 'zoom') {
         const factor = e.altKey ? 0.8 : 1.25
         const rect = canvas.getBoundingClientRect()
@@ -352,7 +423,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
         drawPreviewRef.current = { x: wx, y: wy, width: 0, height: 0 }
       }
     },
-    [canvasRef, getEffectiveTool],
+    [canvasRef, getEffectiveTool, contextMenu],
   )
 
   const onPointerMove = useCallback(
@@ -434,6 +505,16 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
       const ptr = ptrRef.current
       if (!ptr.down) return
 
+      // Cancel long-press if finger moved >10px
+      if (longPressTimerRef.current) {
+        const moveX = e.clientX - ptr.startX
+        const moveY = e.clientY - ptr.startY
+        if (Math.sqrt(moveX * moveX + moveY * moveY) > 10) {
+          clearTimeout(longPressTimerRef.current)
+          longPressTimerRef.current = null
+        }
+      }
+
       const dx = e.clientX - ptr.lastX
       const dy = e.clientY - ptr.lastY
       ptr.lastX = e.clientX
@@ -468,6 +549,12 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
 
   const onPointerUp = useCallback(
     (e: React.PointerEvent) => {
+      // Cancel long-press on pointer up
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current)
+        longPressTimerRef.current = null
+      }
+
       const canvas = canvasRef.current
       if (canvas) canvas.releasePointerCapture(e.pointerId)
 
@@ -587,6 +674,8 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
     [canvasRef, getEffectiveTool, hoverCursor],
   )
 
+  const dismissContextMenu = useCallback(() => setContextMenu(null), [])
+
   return {
     onPointerDown,
     onPointerMove,
@@ -596,5 +685,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
     getDrawPreview,
     hoverCursor,
     onHoverMove,
+    contextMenu,
+    dismissContextMenu,
   }
 }

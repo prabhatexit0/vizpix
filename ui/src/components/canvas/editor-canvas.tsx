@@ -9,6 +9,7 @@ import { CropOverlay } from './crop-overlay'
 import { DrawPreviewOverlay } from './draw-preview-overlay'
 import { InlineTextEditor } from './inline-text-editor'
 import { SelectionOutline } from './selection-outline'
+import { TouchContextMenu } from './touch-context-menu'
 
 export function EditorCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -24,6 +25,8 @@ export function EditorCanvas() {
     getDrawPreview,
     hoverCursor,
     onHoverMove,
+    contextMenu,
+    dismissContextMenu,
   } = useCanvasInteractions(canvasRef)
   useKeyboardShortcuts(setTempHand, canvasRef)
 
@@ -165,6 +168,7 @@ export function EditorCanvas() {
       {editingTextLayerId && (
         <InlineTextEditor canvasRef={canvasRef} layerId={editingTextLayerId} viewport={viewport} />
       )}
+      {contextMenu && <TouchContextMenu state={contextMenu} onDismiss={dismissContextMenu} />}
       <div className="absolute right-2 bottom-2 z-10 flex items-center gap-1 rounded-md bg-neutral-900/80 text-xs text-neutral-400 backdrop-blur-sm">
         <button
           onClick={() => setZoom(1)}
