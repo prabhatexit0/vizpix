@@ -49,10 +49,19 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
     invalidateAlphaCache(id)
     get().pushSnapshot()
     set((s) => {
-      const layers = removeLayerFromTree(s.layers, id)
-      const activeLayerId =
-        s.activeLayerId === id ? (layers[layers.length - 1]?.id ?? null) : s.activeLayerId
-      return { layers, activeLayerId }
+      if (s.activeLayerId !== id) {
+        return { layers: removeLayerFromTree(s.layers, id) }
+      }
+      // Find nearest sibling before removing
+      const parentInfo = findLayerParent(s.layers, id)
+      let nextActiveId: string | null = null
+      if (parentInfo) {
+        const siblings = parentInfo.parent
+        const idx = parentInfo.index
+        if (idx > 0) nextActiveId = siblings[idx - 1].id
+        else if (idx < siblings.length - 1) nextActiveId = siblings[idx + 1].id
+      }
+      return { layers: removeLayerFromTree(s.layers, id), activeLayerId: nextActiveId }
     })
   },
 
@@ -330,6 +339,7 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
   moveLayerToGroup: (layerId, groupId, index) => {
     get().pushSnapshot()
     set((s) => {
+      if (isDescendantOf(layerId, groupId, s.layers)) return s
       const layer = findLayerById(s.layers, layerId)
       if (!layer) return s
       let layers = removeLayerFromTree(s.layers, layerId)
@@ -429,13 +439,40 @@ function deepCloneLayer(layer: Layer): Layer {
     return {
       ...base,
       type: 'shape',
-      fill: { ...layer.fill } as ShapeLayer['fill'],
+      fill: deepCloneFill(layer.fill),
       stroke: { ...layer.stroke },
       points: layer.points.map((p) => ({ ...p })),
     } as ShapeLayer
   }
 
+  if (layer.type === 'text') {
+    return {
+      ...base,
+      type: 'text',
+      fill: deepCloneFill(layer.fill),
+    } as TextLayer
+  }
+
   return base as Layer
+}
+
+function deepCloneFill(fill: ShapeLayer['fill']): ShapeLayer['fill'] {
+  switch (fill.type) {
+    case 'none':
+    case 'solid':
+      return { ...fill }
+    case 'linear-gradient':
+    case 'radial-gradient':
+      return {
+        ...fill,
+        gradient: { ...fill.gradient, stops: fill.gradient.stops.map((s) => ({ ...s })) },
+      }
+    case 'conic-gradient':
+      return {
+        ...fill,
+        gradient: { ...fill.gradient, stops: fill.gradient.stops.map((s) => ({ ...s })) },
+      }
+  }
 }
 
 function rebuildTreeWithParent(layers: Layer[], oldParent: Layer[], newParent: Layer[]): Layer[] {
@@ -447,6 +484,13 @@ function rebuildTreeWithParent(layers: Layer[], oldParent: Layer[], newParent: L
     }
     return l
   })
+}
+
+function isDescendantOf(layerId: string, potentialDescendantId: string, layers: Layer[]): boolean {
+  if (layerId === potentialDescendantId) return true
+  const node = findLayerById(layers, layerId)
+  if (!node || node.type !== 'group') return false
+  return !!findLayerById(node.children, potentialDescendantId)
 }
 
 function findGroupContaining(layers: Layer[], childId: string): GroupLayer | null {
