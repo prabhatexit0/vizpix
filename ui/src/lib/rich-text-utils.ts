@@ -61,7 +61,7 @@ function runsHaveSameFormatting(a: TextRun, b: TextRun): boolean {
   return true
 }
 
-function mergeAdjacentRuns(runs: TextRun[]): TextRun[] {
+export function mergeAdjacentRuns(runs: TextRun[]): TextRun[] {
   if (runs.length <= 1) return runs
   const merged: TextRun[] = [{ ...runs[0] }]
   for (let i = 1; i < runs.length; i++) {

@@ -1,12 +1,19 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react'
 import { useEditorStore } from '@/store'
-import type { Viewport } from '@/store/types'
+import type { TextRun, Viewport } from '@/store/types'
 import {
   findLayerById,
   measureCursorPosition,
   findCursorIndexFromLocal,
   getLayerDimensions,
+  updateLayerInTree,
 } from '@/lib/layer-utils'
+import {
+  getFormattingAtSelection,
+  splitRunsAtIndex,
+  mergeAdjacentRuns,
+  getPlainText,
+} from '@/lib/rich-text-utils'
 import { setTextCursorClickCallback } from '@/hooks/use-canvas-interactions'
 import { TextFormatToolbar } from './text-format-toolbar'
 
@@ -36,6 +43,7 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
   const [cursorIndex, setCursorIndex] = useState(initialContent.length)
   const [selectionEnd, setSelectionEnd] = useState(initialContent.length)
   const [canvasRect, setCanvasRect] = useState<{ width: number; height: number } | null>(null)
+  const [pendingFormat, setPendingFormat] = useState<Partial<Omit<TextRun, 'text'>> | null>(null)
 
   // Track canvas size
   useEffect(() => {
@@ -123,13 +131,36 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
       snapshotPushedRef.current = true
     }
 
-    updateTextProperties(layerId, { content: ta.value })
+    const newContent = ta.value
+    const newCursor = ta.selectionStart ?? 0
+
+    if (pendingFormat && newContent.length > layer.content.length) {
+      // Characters were inserted with pending formatting
+      const insertedLen = newContent.length - layer.content.length
+      const insertPos = newCursor - insertedLen
+      const insertedText = newContent.slice(insertPos, newCursor)
+      const [before, after] = splitRunsAtIndex(layer.runs, insertPos)
+      const newRun: TextRun = { ...pendingFormat, text: insertedText }
+      const newRuns = mergeAdjacentRuns([...before, newRun, ...after])
+      const { layers } = useEditorStore.getState()
+      useEditorStore.setState({
+        layers: updateLayerInTree(layers, layerId, (l) => {
+          if (l.type !== 'text') return l
+          return { ...l, runs: newRuns, content: getPlainText(newRuns) }
+        }),
+      })
+      setPendingFormat(null)
+    } else {
+      updateTextProperties(layerId, { content: newContent })
+      if (pendingFormat) setPendingFormat(null)
+    }
+
     const start = ta.selectionStart ?? 0
     const end = ta.selectionEnd ?? start
     setCursorIndex(start)
     setSelectionEnd(end)
     setTextSelection({ start, end })
-  }, [layer, layerId, updateTextProperties, pushSnapshot, setTextSelection])
+  }, [layer, layerId, updateTextProperties, pushSnapshot, setTextSelection, pendingFormat])
 
   const onSelect = useCallback(() => {
     const ta = textareaRef.current
@@ -143,6 +174,48 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
 
   const removeLayer = useEditorStore((s) => s.removeLayer)
   const setActiveTool = useEditorStore((s) => s.setActiveTool)
+  const applyTextFormatting = useEditorStore((s) => s.applyTextFormatting)
+
+  const toggleFormatting = useCallback(
+    (prop: keyof Omit<TextRun, 'text'>, activeValue: unknown, inactiveValue: unknown) => {
+      if (!layer) return
+      const sel = useEditorStore.getState().textSelection
+      if (!sel) return
+
+      if (sel.start !== sel.end) {
+        // Range selection: toggle based on current selection formatting
+        const fmt = getFormattingAtSelection(layer.runs, sel.start, sel.end)
+        const isActive = fmt[prop as keyof typeof fmt] === activeValue
+        if (!snapshotPushedRef.current) {
+          pushSnapshot()
+          snapshotPushedRef.current = true
+        }
+        applyTextFormatting(layerId, {
+          [prop]: isActive ? inactiveValue : activeValue,
+        } as Partial<TextRun>)
+      } else {
+        // Point cursor: toggle pending format for next typed character
+        setPendingFormat((prev) => {
+          const current = prev ?? {}
+          const currentVal = current[prop as keyof typeof current]
+          if (currentVal === activeValue) {
+            // Already pending active, switch to inactive
+            const next = { ...current, [prop]: inactiveValue }
+            return next
+          }
+          // Check the run at cursor to determine current state
+          const fmt = getFormattingAtSelection(layer.runs, sel.start, sel.end)
+          const runVal = fmt[prop as keyof typeof fmt]
+          const resolvedCurrent = currentVal !== undefined ? currentVal : runVal
+          return {
+            ...current,
+            [prop]: resolvedCurrent === activeValue ? inactiveValue : activeValue,
+          }
+        })
+      }
+    },
+    [layer, layerId, applyTextFormatting, pushSnapshot],
+  )
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -170,8 +243,29 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
           setTextSelection({ start: 0, end: ta.value.length })
         }
       }
+      // Text formatting shortcuts
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'b') {
+          e.preventDefault()
+          toggleFormatting('fontWeight', 700, 400)
+        } else if (e.key === 'i') {
+          e.preventDefault()
+          toggleFormatting('fontStyle', 'italic', 'normal')
+        } else if (e.key === 'u') {
+          e.preventDefault()
+          toggleFormatting('textDecoration', 'underline', 'none')
+        }
+      }
     },
-    [commit, layerId, removeLayer, setActiveTool, setEditingTextLayerId, setTextSelection],
+    [
+      commit,
+      layerId,
+      removeLayer,
+      setActiveTool,
+      setEditingTextLayerId,
+      setTextSelection,
+      toggleFormatting,
+    ],
   )
 
   // Compute caret screen position
