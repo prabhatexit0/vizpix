@@ -1,12 +1,12 @@
 import { useEditorStore } from '@/store'
 import { useResponsive } from '@/hooks/use-responsive'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer'
+import { Drawer, DrawerContent } from '@/components/ui/drawer'
 import { LayersPanel } from '@/components/panels/layers-panel'
 import { PropertiesPanel } from '@/components/panels/properties-panel'
 import { AdjustPanel } from '@/components/panels/adjust-panel'
 import { PanelRight } from 'lucide-react'
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 
 const MIN_WIDTH = 220
 const MAX_WIDTH = 480
@@ -96,7 +96,6 @@ function ResizeHandle({ onResize }: { onResize: (deltaX: number) => void }) {
 
 export function RightPanel() {
   const { isMobile } = useResponsive()
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [width, setWidth] = useState(DEFAULT_WIDTH)
 
   const handleResize = useCallback((dx: number) => {
@@ -104,20 +103,40 @@ export function RightPanel() {
     setWidth((w) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, w - dx)))
   }, [])
 
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  useEffect(() => {
+    if (!isMobile) return
+    let prevId = useEditorStore.getState().activeLayerId
+    return useEditorStore.subscribe((state) => {
+      if (state.activeLayerId !== prevId) {
+        prevId = state.activeLayerId
+        setDrawerOpen(state.activeLayerId !== null)
+      }
+    })
+  }, [isMobile])
+
+  const handleDrawerChange = useCallback((open: boolean) => {
+    setDrawerOpen(open)
+  }, [])
+
   if (isMobile) {
     return (
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DrawerTrigger asChild>
-          <button className="absolute top-4 right-4 z-50 rounded-lg border border-white/10 bg-neutral-900/90 p-2.5 text-neutral-400 backdrop-blur-md hover:text-white">
-            <PanelRight size={20} />
-          </button>
-        </DrawerTrigger>
-        <DrawerContent className="max-h-[70vh]">
-          <div className="h-[60vh]">
-            <PanelTabs />
-          </div>
-        </DrawerContent>
-      </Drawer>
+      <>
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className="absolute top-4 right-0 z-50 rounded-l-lg border border-r-0 border-white/10 bg-neutral-900/90 p-2 text-neutral-400 backdrop-blur-md hover:text-white"
+        >
+          <PanelRight size={18} />
+        </button>
+        <Drawer direction="right" open={drawerOpen} onOpenChange={handleDrawerChange}>
+          <DrawerContent className="h-full">
+            <div className="flex h-full flex-col">
+              <PanelTabs />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      </>
     )
   }
 
