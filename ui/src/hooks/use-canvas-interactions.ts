@@ -194,6 +194,10 @@ function pointerMidpoint(a: TouchPointer, b: TouchPointer): TouchPointer {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
 }
 
+function pointerAngle(a: TouchPointer, b: TouchPointer): number {
+  return Math.atan2(b.y - a.y, b.x - a.x) * (180 / Math.PI)
+}
+
 export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
   const ptrRef = useRef<PointerState>({
     down: false,
@@ -209,10 +213,14 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
   const drawPreviewRef = useRef<DrawPreview | null>(null)
   const lastClickRef = useRef<{ time: number; layerId: string | null }>({ time: 0, layerId: null })
 
-  // Multi-touch tracking for pinch-to-zoom and two-finger pan
+  // Multi-touch tracking for pinch-to-zoom, two-finger pan, and rotation
   const touchPointersRef = useRef<Map<number, TouchPointer>>(new Map())
   const lastPinchDistRef = useRef<number | null>(null)
   const lastPinchMidRef = useRef<TouchPointer | null>(null)
+  const lastPinchAngleRef = useRef<number | null>(null)
+  const rotationGestureRef = useRef<{ layerId: string; snapshotPushed: boolean } | null>(null)
+  const rotationHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const rotationActiveRef = useRef(false)
 
   const getEffectiveTool = useCallback((): ToolMode => {
     if (tempHandRef.current) return 'hand'
@@ -232,6 +240,33 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
           const [a, b] = [...touchPointersRef.current.values()]
           lastPinchDistRef.current = pointerDistance(a, b)
           lastPinchMidRef.current = pointerMidpoint(a, b)
+          lastPinchAngleRef.current = pointerAngle(a, b)
+          rotationActiveRef.current = false
+          rotationGestureRef.current = null
+          if (rotationHoldTimerRef.current) {
+            clearTimeout(rotationHoldTimerRef.current)
+            rotationHoldTimerRef.current = null
+          }
+
+          // Check if both fingers are on/near the selected layer for rotation
+          const { activeLayerId, layers } = useEditorStore.getState()
+          if (activeLayerId) {
+            const layer = findLayerById(layers, activeLayerId)
+            if (layer && !layer.locked) {
+              const wA = screenToWorld(a.x, a.y, canvas)
+              const wB = screenToWorld(b.x, b.y, canvas)
+              const hitA = hitTestLayer(layer, wA.wx, wA.wy)
+              const hitB = hitTestLayer(layer, wB.wx, wB.wy)
+              if (hitA && hitB) {
+                rotationGestureRef.current = { layerId: activeLayerId, snapshotPushed: false }
+                rotationHoldTimerRef.current = setTimeout(() => {
+                  rotationActiveRef.current = true
+                  rotationHoldTimerRef.current = null
+                }, 200)
+              }
+            }
+          }
+
           // Cancel any single-pointer drag in progress
           ptrRef.current.down = false
           return
@@ -334,6 +369,17 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
           const factor = dist / lastPinchDistRef.current
           lastPinchDistRef.current = dist
 
+          // Cancel rotation hold if significant pinch (distance change > 15%) before hold completes
+          if (
+            rotationHoldTimerRef.current &&
+            !rotationActiveRef.current &&
+            Math.abs(factor - 1) > 0.15
+          ) {
+            clearTimeout(rotationHoldTimerRef.current)
+            rotationHoldTimerRef.current = null
+            rotationGestureRef.current = null
+          }
+
           const mid = pointerMidpoint(a, b)
           const rect = canvas.getBoundingClientRect()
           const centerX = mid.x - rect.left - rect.width / 2
@@ -347,6 +393,40 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
             useEditorStore.getState().pan(panDx, panDy)
           }
           lastPinchMidRef.current = mid
+
+          // Two-finger rotation: apply when hold threshold met and fingers on layer
+          if (
+            rotationActiveRef.current &&
+            rotationGestureRef.current &&
+            lastPinchAngleRef.current !== null
+          ) {
+            const angle = pointerAngle(a, b)
+            let delta = angle - lastPinchAngleRef.current
+            // Normalize delta to [-180, 180]
+            if (delta > 180) delta -= 360
+            if (delta < -180) delta += 360
+
+            const gesture = rotationGestureRef.current
+            const store = useEditorStore.getState()
+            const layer = findLayerById(store.layers, gesture.layerId)
+            if (layer) {
+              if (!gesture.snapshotPushed) {
+                store.pushSnapshot()
+                gesture.snapshotPushed = true
+              }
+              let newRotation = layer.transform.rotation + delta
+              // Snap to 0/90/180/270 when within 5°
+              const snapAngles = [0, 90, 180, 270, -90, -180, -270]
+              for (const snap of snapAngles) {
+                if (Math.abs(newRotation - snap) < 5) {
+                  newRotation = snap
+                  break
+                }
+              }
+              store.setTransform(gesture.layerId, { rotation: newRotation })
+            }
+          }
+          lastPinchAngleRef.current = pointerAngle(a, b)
           return
         }
       }
@@ -397,6 +477,13 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
         if (touchPointersRef.current.size < 2) {
           lastPinchDistRef.current = null
           lastPinchMidRef.current = null
+          lastPinchAngleRef.current = null
+          rotationActiveRef.current = false
+          rotationGestureRef.current = null
+          if (rotationHoldTimerRef.current) {
+            clearTimeout(rotationHoldTimerRef.current)
+            rotationHoldTimerRef.current = null
+          }
         }
       }
 
