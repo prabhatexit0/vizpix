@@ -45,6 +45,9 @@ interface DragState {
   layerHeight: number
   rotationRad: number
   snapshotPushed: boolean
+  isTextLayer: boolean
+  initialBoxWidth: number | null
+  initialBoxHeight: number | 'auto'
 }
 
 export function TransformHandles({ canvasRef, layerId, viewport }: TransformHandlesProps) {
@@ -104,6 +107,7 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
       if (!layer) return
 
       const dragDims = getLayerDimensions(layer)
+      const isText = layer.type === 'text'
       dragRef.current = {
         handleType,
         handleIndex,
@@ -117,6 +121,9 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
         layerHeight: dragDims.height,
         rotationRad: (layer.transform.rotation * Math.PI) / 180,
         snapshotPushed: false,
+        isTextLayer: isText,
+        initialBoxWidth: isText ? layer.boxWidth : null,
+        initialBoxHeight: isText ? layer.boxHeight : 'auto',
       }
 
       const onDocPointerMove = (ev: PointerEvent) => {
@@ -148,7 +155,41 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
         const rotCos = Math.cos(drag.rotationRad)
         const rotSin = Math.sin(drag.rotationRad)
 
-        if (drag.handleType === 'corner') {
+        if (drag.isTextLayer) {
+          // Text layers: resize boxWidth/boxHeight, not scale
+          if (drag.handleType === 'corner') {
+            const [signX, signY] = CORNER_SIGNS[drag.handleIndex]
+            const newBoxWidth = Math.max(
+              20,
+              (drag.initialBoxWidth ?? drag.layerWidth) + signX * localDx,
+            )
+            const localOffX =
+              (signX * (newBoxWidth - (drag.initialBoxWidth ?? drag.layerWidth))) / 2
+            const localOffY = (signY * localDy) / 2
+
+            store.updateTextProperties(layerId, { boxWidth: newBoxWidth })
+            store.setTransform(layerId, {
+              x: drag.initialX + localOffX * rotCos - localOffY * rotSin,
+              y: drag.initialY + localOffX * rotSin + localOffY * rotCos,
+            })
+          } else {
+            const [signX, , affectsX] = MID_SIGNS[drag.handleIndex]
+            if (affectsX) {
+              const newBoxWidth = Math.max(
+                20,
+                (drag.initialBoxWidth ?? drag.layerWidth) + signX * localDx,
+              )
+              const localOffX =
+                (signX * (newBoxWidth - (drag.initialBoxWidth ?? drag.layerWidth))) / 2
+
+              store.updateTextProperties(layerId, { boxWidth: newBoxWidth })
+              store.setTransform(layerId, {
+                x: drag.initialX + localOffX * rotCos,
+                y: drag.initialY + localOffX * rotSin,
+              })
+            }
+          }
+        } else if (drag.handleType === 'corner') {
           const [signX, signY] = CORNER_SIGNS[drag.handleIndex]
           let newScaleX = Math.max(0.01, drag.initialScaleX + (signX * localDx) / drag.layerWidth)
           let newScaleY = Math.max(0.01, drag.initialScaleY + (signY * localDy) / drag.layerHeight)
