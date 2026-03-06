@@ -19,7 +19,7 @@ import { useEditorStore } from '@/store'
 import { cn } from '@/lib/utils'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
-import { findLayerById } from '@/lib/layer-utils'
+import { findLayerById, getLayerDimensions } from '@/lib/layer-utils'
 import { renderLayerToContext } from '@/lib/layer-render'
 import type { Layer } from '@/store/types'
 
@@ -88,15 +88,29 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
       const ctx = c.getContext('2d')
       if (!ctx) return
       ctx.clearRect(0, 0, 32, 32)
+
+      // For empty text layers, skip rendering (icon shown via fallback)
+      if (layer.type === 'text' && !layer.content) return
+
+      const dims = getLayerDimensions(layer)
+      const scale = Math.min(28 / dims.width, 28 / dims.height, 1)
+
       ctx.save()
+
+      // Light background for text contrast
+      if (layer.type === 'text') {
+        ctx.fillStyle = '#e5e5e5'
+        ctx.fillRect(0, 0, 32, 32)
+      }
+
       ctx.translate(16, 16)
-      ctx.scale(0.12, 0.12)
+      ctx.scale(scale, scale)
       const tempLayer = {
         ...layer,
         transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
         opacity: 1,
       }
-      renderLayerToContext(ctx, tempLayer as Layer, 256, 256)
+      renderLayerToContext(ctx, tempLayer as Layer, Math.ceil(dims.width), Math.ceil(dims.height))
       ctx.restore()
     }, 200)
 
@@ -150,7 +164,7 @@ export function LayerItem({ layerId, depth = 0 }: LayerItemProps) {
                   ctx.drawImage(layer.imageBitmap, (32 - w) / 2, (32 - h) / 2, w, h)
                 }}
               />
-            ) : layer.type === 'shape' || layer.type === 'text' ? (
+            ) : layer.type === 'shape' || (layer.type === 'text' && layer.content) ? (
               <canvas
                 ref={thumbCanvasRef}
                 className="h-full w-full object-contain"
