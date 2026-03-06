@@ -119,9 +119,7 @@ export function Toolbar() {
     cn(
       'flex items-center justify-center rounded-md transition-colors',
       isMobile ? 'min-h-[44px] min-w-[44px] p-2.5' : 'p-2',
-      active
-        ? cn('bg-blue-500/30 text-blue-400', !isMobile && 'border-l-2 border-blue-500')
-        : 'text-neutral-400 hover:bg-white/10 hover:text-white',
+      active ? 'bg-blue-600 text-white' : 'text-neutral-400 hover:bg-white/10 hover:text-white',
     )
 
   const actionBtnClass = cn(
@@ -149,17 +147,8 @@ export function Toolbar() {
 
       <div className={cn(isMobile ? 'h-5 w-px bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button onClick={handleAddImage} className={actionBtnClass}>
-            <ImagePlus size={iconSize} />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side={isMobile ? 'top' : 'right'}>Add Image</TooltipContent>
-      </Tooltip>
-
       {!isMobile && (
-        <span className="mt-1 text-[9px] font-medium tracking-wider text-neutral-500">DRAW</span>
+        <span className="mt-1 text-[10px] font-semibold tracking-wider text-neutral-400">DRAW</span>
       )}
 
       <Tooltip>
@@ -199,6 +188,15 @@ export function Toolbar() {
       </Tooltip>
 
       <div className={cn(isMobile ? 'h-5 w-px bg-white/15' : 'mx-1 h-px w-full bg-white/15')} />
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button onClick={handleAddImage} className={actionBtnClass}>
+            <ImagePlus size={iconSize} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side={isMobile ? 'top' : 'right'}>Add Image</TooltipContent>
+      </Tooltip>
 
       <Tooltip>
         <TooltipTrigger asChild>
