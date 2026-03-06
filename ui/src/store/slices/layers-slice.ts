@@ -436,7 +436,7 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
   },
 })
 
-function deepCloneLayer(layer: Layer): Layer {
+export function deepCloneLayer(layer: Layer): Layer {
   const base = {
     ...layer,
     id: crypto.randomUUID(),

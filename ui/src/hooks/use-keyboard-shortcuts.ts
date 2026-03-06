@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store'
 import type { Layer, ToolMode } from '@/store/types'
 import { findLayerById, findLayerParent } from '@/lib/layer-utils'
+import { deepCloneLayer } from '@/store/slices/layers-slice'
 
 let clipboardLayer: Layer | null = null
 
@@ -122,13 +123,13 @@ export function useKeyboardShortcuts(
       if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && !e.shiftKey) {
         e.preventDefault()
         if (clipboardLayer) {
-          const src = clipboardLayer
-          const clone: Layer = {
-            ...src,
-            id: crypto.randomUUID(),
-            name: `${src.name} copy`,
-            transform: { ...src.transform, x: src.transform.x + 20, y: src.transform.y + 20 },
-          } as Layer
+          const clone = deepCloneLayer(clipboardLayer)
+          clone.name = `${clipboardLayer.name} copy`
+          clone.transform = {
+            ...clone.transform,
+            x: clipboardLayer.transform.x + 20,
+            y: clipboardLayer.transform.y + 20,
+          }
           store.pushSnapshot()
           useEditorStore.setState((s) => ({
             layers: [...s.layers, clone],
