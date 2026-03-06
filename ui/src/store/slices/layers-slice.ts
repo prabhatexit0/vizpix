@@ -261,6 +261,7 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
       type: 'text',
       name: `Text ${textCounter}`,
       content: '',
+      runs: [{ text: '' }],
       fontFamily: 'Inter',
       fontSize: 24,
       fontWeight: 400,
@@ -290,7 +291,11 @@ export const createLayersSlice: StateCreator<EditorState, [], [], LayersSlice> =
     set((s) => ({
       layers: updateLayerInTree(s.layers, id, (l) => {
         if (l.type !== 'text') return l
-        return { ...l, ...props }
+        const updated = { ...l, ...props }
+        if ('content' in props && props.content !== undefined) {
+          updated.runs = [{ text: props.content }]
+        }
+        return updated
       }),
     }))
   },
@@ -467,6 +472,7 @@ export function deepCloneLayer(layer: Layer): Layer {
       ...base,
       type: 'text',
       fill: deepCloneFill(layer.fill),
+      runs: layer.runs.map((r) => ({ ...r })),
     } as TextLayer
   }
 

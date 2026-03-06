@@ -67,6 +67,17 @@ export interface Point {
 export type ShapeType = 'rectangle' | 'ellipse' | 'line' | 'polygon'
 export type FontWeight = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900
 
+export interface TextRun {
+  text: string
+  fontFamily?: string
+  fontSize?: number
+  fontWeight?: FontWeight
+  fontStyle?: 'normal' | 'italic'
+  fill?: Fill
+  letterSpacing?: number
+  textDecoration?: 'none' | 'underline' | 'strikethrough'
+}
+
 // --- Layer Mask ---
 
 export interface LayerMask {
@@ -116,6 +127,7 @@ export interface ShapeLayer extends LayerBase {
 export interface TextLayer extends LayerBase {
   type: 'text'
   content: string
+  runs: TextRun[]
   fontFamily: string
   fontSize: number
   fontWeight: FontWeight
@@ -201,6 +213,7 @@ export interface LayersSlice {
       Pick<
         TextLayer,
         | 'content'
+        | 'runs'
         | 'fontFamily'
         | 'fontSize'
         | 'fontWeight'

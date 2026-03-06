@@ -4,6 +4,7 @@ import type {
   ImageLayer,
   ShapeLayer,
   TextLayer,
+  TextRun,
   GroupLayer,
   LayerTransform,
   BlendMode,
@@ -11,6 +12,18 @@ import type {
 } from '@/store/types'
 import { decodeToBitmap } from './canvas-utils'
 import { renderLayerToContext } from './layer-render'
+
+function hasRunOverrides(run: TextRun): boolean {
+  return (
+    run.fontFamily !== undefined ||
+    run.fontSize !== undefined ||
+    run.fontWeight !== undefined ||
+    run.fontStyle !== undefined ||
+    run.fill !== undefined ||
+    run.letterSpacing !== undefined ||
+    run.textDecoration !== undefined
+  )
+}
 
 interface VpdManifest {
   version: 1
@@ -201,6 +214,9 @@ function serializeLayer(l: Layer, files: Record<string, Uint8Array>): VpdLayerEn
         fontSize: l.fontSize,
         ...base,
       }
+      if (l.runs.length > 1 || (l.runs.length === 1 && hasRunOverrides(l.runs[0]))) {
+        ;(entry as Record<string, unknown>).runs = l.runs
+      }
       if (l.fontWeight !== 400) entry.fontWeight = l.fontWeight
       if (l.fontStyle !== 'normal') entry.fontStyle = l.fontStyle
       const defaultFill = { type: 'solid', color: '#ffffff' }
@@ -335,10 +351,13 @@ async function deserializeLayer(
     case 'text': {
       const txtEntry = entry as VpdTextEntry
       const defaultFill = { type: 'solid' as const, color: '#ffffff' }
+      const content = txtEntry.content
+      const runs = (txtEntry as Record<string, unknown>).runs as TextRun[] | undefined
       return {
         ...base,
         type: 'text',
-        content: txtEntry.content,
+        content,
+        runs: runs && runs.length > 0 ? runs : [{ text: content }],
         fontFamily: txtEntry.fontFamily,
         fontSize: txtEntry.fontSize,
         fontWeight: (txtEntry.fontWeight ?? 400) as TextLayer['fontWeight'],
