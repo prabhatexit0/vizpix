@@ -535,6 +535,63 @@ export function PropertiesPanel() {
             </div>
           </div>
 
+          {/* Text fill type */}
+          <div>
+            <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
+              Fill Type
+            </label>
+            <Select
+              value={layer.fill.type}
+              onValueChange={(v) => {
+                const currentFill = layer.fill
+                const baseColor =
+                  currentFill.type === 'solid'
+                    ? currentFill.color
+                    : currentFill.type === 'linear-gradient' ||
+                        currentFill.type === 'radial-gradient'
+                      ? (currentFill.gradient.stops[0]?.color ?? '#ffffff')
+                      : '#ffffff'
+
+                const fillMap: Record<string, () => Fill> = {
+                  none: () => ({ type: 'none' as const }),
+                  solid: () => ({ type: 'solid' as const, color: baseColor }),
+                  'linear-gradient': () => ({
+                    type: 'linear-gradient' as const,
+                    gradient: {
+                      stops: [
+                        { offset: 0, color: baseColor },
+                        { offset: 1, color: '#0000ff' },
+                      ],
+                      angle: 90,
+                    },
+                  }),
+                  'radial-gradient': () => ({
+                    type: 'radial-gradient' as const,
+                    gradient: {
+                      stops: [
+                        { offset: 0, color: baseColor },
+                        { offset: 1, color: '#000000' },
+                      ],
+                      angle: 0,
+                    },
+                  }),
+                }
+                const factory = fillMap[v]
+                if (factory) updateTextProperties(activeLayerId, { fill: factory() as Fill })
+              }}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="solid">Solid</SelectItem>
+                <SelectItem value="linear-gradient">Linear Gradient</SelectItem>
+                <SelectItem value="radial-gradient">Radial Gradient</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Text fill color */}
           {layer.fill.type === 'solid' && (
             <div>
