@@ -73,7 +73,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Replace the current Slider-only opacity control. Currently opacity shows 'Opacity — 75%' as label with just a slider below. The new layout should be the SliderInput combo."
     },
     {
@@ -88,7 +88,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Corner radius is currently a plain Input type=number. Adding a slider makes it much more discoverable and intuitive."
     },
     {
@@ -104,7 +104,7 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "These are the most commonly adjusted text properties. Scrub makes them much faster to fine-tune than typing numbers."
     },
     {
