@@ -148,7 +148,7 @@ export function EditorCanvas() {
       {activeLayerId && (
         <SelectionOutline canvasRef={canvasRef} layerId={activeLayerId} viewport={viewport} />
       )}
-      {activeLayerId && activeTool === 'pointer' && (
+      {activeLayerId && activeTool === 'pointer' && !editingTextLayerId && (
         <TransformHandles canvasRef={canvasRef} layerId={activeLayerId} viewport={viewport} />
       )}
       {activeLayerId && activeTool === 'crop' && (

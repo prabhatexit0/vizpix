@@ -54,6 +54,7 @@ interface DragState {
 export function TransformHandles({ canvasRef, layerId, viewport }: TransformHandlesProps) {
   const layer = useEditorStore((s) => findLayerById(s.layers, layerId))
   const dragRef = useRef<DragState | null>(null)
+  const lastPointerDownRef = useRef(0)
   const [draggingHandle, setDraggingHandle] = useState<{
     type: 'corner' | 'mid'
     index: number
@@ -110,6 +111,15 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
       e.preventDefault()
 
       if (!layer) return
+
+      // Detect double-click on text layer → start editing instead of resizing
+      const now = Date.now()
+      if (now - lastPointerDownRef.current < 400 && layer.type === 'text') {
+        lastPointerDownRef.current = 0
+        useEditorStore.getState().setEditingTextLayerId(layerId)
+        return
+      }
+      lastPointerDownRef.current = now
 
       const dragDims = getLayerDimensions(layer)
       const isText = layer.type === 'text'
@@ -294,6 +304,7 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
         strokeWidth={1.5}
         strokeDasharray="4 2"
         opacity={0.8}
+        pointerEvents="none"
       />
       {/* Corner handles */}
       {corners.map((c, i) => (

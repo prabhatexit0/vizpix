@@ -276,8 +276,8 @@ async function run(page: any) {
     await page.waitForTimeout(300)
     await ss(page, '08-props-scrolled-bottom')
 
-    // Double-click text to edit (force: true to bypass SVG overlay interception)
-    await page.locator('canvas').first().dblclick({ position: { x: box.width / 2, y: 150 }, force: true })
+    // Double-click text to edit
+    await page.locator('canvas').first().dblclick({ position: { x: box.width / 2, y: 150 } })
     await page.waitForTimeout(600)
     await ss(page, '09-text-editing')
 

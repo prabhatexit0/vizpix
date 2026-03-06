@@ -61,6 +61,7 @@ export function SelectionOutline({ canvasRef, layerId, viewport }: SelectionOutl
         stroke="#3b82f6"
         strokeWidth={1}
         opacity={0.6}
+        pointerEvents="none"
       />
     </svg>
   )
