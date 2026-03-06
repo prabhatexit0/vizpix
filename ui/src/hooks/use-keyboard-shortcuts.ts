@@ -169,6 +169,12 @@ export function useKeyboardShortcuts(
         return
       }
 
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y') && !e.shiftKey) {
+        e.preventDefault()
+        store.redo()
+        return
+      }
+
       // ---- Layer management ----
 
       if ((e.ctrlKey || e.metaKey) && (e.key === 'j' || e.key === 'J')) {
