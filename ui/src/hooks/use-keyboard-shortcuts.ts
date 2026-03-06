@@ -234,9 +234,15 @@ export function useKeyboardShortcuts(
         return
       }
 
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.key === 'd' || e.key === 'D') &&
+        !store.editingTextLayerId
+      ) {
         e.preventDefault()
-        store.setActiveLayer(null)
+        if (store.activeLayerId) {
+          store.duplicateLayer(store.activeLayerId)
+        }
         return
       }
 
