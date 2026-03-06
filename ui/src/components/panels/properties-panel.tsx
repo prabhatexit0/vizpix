@@ -502,22 +502,15 @@ export function PropertiesPanel() {
             )}
           </div>
 
-          <div>
-            <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-              Size
-              {selectionFormatting?.mixed && selectionFormatting.fontSize === undefined
-                ? ' (Mixed)'
-                : ''}
-            </label>
-            <Input
-              type="number"
-              value={selectionFormatting?.fontSize ?? layer.fontSize}
-              min={1}
-              onFocus={onInputFocus}
-              onChange={(e) => updateTextProp({ fontSize: Number(e.target.value) })}
-              className="h-8 text-xs"
-            />
-          </div>
+          <ScrubInput
+            label={`Size${selectionFormatting?.mixed && selectionFormatting.fontSize === undefined ? ' (Mixed)' : ''}`}
+            value={selectionFormatting?.fontSize ?? layer.fontSize}
+            step={1}
+            min={1}
+            suffix="px"
+            onChange={(v) => updateTextProp({ fontSize: v })}
+            onCommit={() => pushSnapshot()}
+          />
 
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -682,35 +675,27 @@ export function PropertiesPanel() {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-                Line H
-              </label>
-              <Input
-                type="number"
-                step={0.1}
-                value={layer.lineHeight}
-                onFocus={onInputFocus}
-                onChange={(e) =>
-                  updateTextProperties(activeLayerId, { lineHeight: Number(e.target.value) })
-                }
-                className="h-8 text-xs"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-                Spacing
-              </label>
-              <Input
-                type="number"
-                value={layer.letterSpacing}
-                onFocus={onInputFocus}
-                onChange={(e) =>
-                  updateTextProperties(activeLayerId, { letterSpacing: Number(e.target.value) })
-                }
-                className="h-8 text-xs"
-              />
-            </div>
+            <ScrubInput
+              label="Line H"
+              value={layer.lineHeight}
+              step={0.05}
+              min={0.5}
+              max={5}
+              precision={2}
+              onChange={(v) => updateTextProperties(activeLayerId, { lineHeight: v })}
+              onCommit={() => pushSnapshot()}
+            />
+            <ScrubInput
+              label="Spacing"
+              value={layer.letterSpacing}
+              step={0.1}
+              min={-10}
+              max={50}
+              precision={1}
+              suffix="px"
+              onChange={(v) => updateTextProperties(activeLayerId, { letterSpacing: v })}
+              onCommit={() => pushSnapshot()}
+            />
           </div>
         </>
       )}
