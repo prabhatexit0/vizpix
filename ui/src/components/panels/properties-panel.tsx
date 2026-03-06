@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useEditorStore } from '@/store'
 import { Input } from '@/components/ui/input'
+import { ScrubInput } from '@/components/ui/scrub-input'
 import {
   Select,
   SelectContent,
@@ -172,92 +173,53 @@ export function PropertiesPanel() {
     <div className="flex flex-col gap-3 overflow-y-auto p-3">
       {/* Position */}
       <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">X</label>
-          <Input
-            type="number"
-            value={displayX}
-            onFocus={onInputFocus}
-            onChange={(e) =>
-              setTransform(activeLayerId, { x: Number(e.target.value) - documentWidth / 2 })
-            }
-            className="h-8 text-xs"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">Y</label>
-          <Input
-            type="number"
-            value={displayY}
-            onFocus={onInputFocus}
-            onChange={(e) =>
-              setTransform(activeLayerId, { y: Number(e.target.value) - documentHeight / 2 })
-            }
-            className="h-8 text-xs"
-          />
-        </div>
+        <ScrubInput
+          label="X"
+          value={displayX}
+          step={1}
+          onChange={(v) => setTransform(activeLayerId, { x: v - documentWidth / 2 })}
+          onCommit={() => pushSnapshot()}
+        />
+        <ScrubInput
+          label="Y"
+          value={displayY}
+          step={1}
+          onChange={(v) => setTransform(activeLayerId, { y: v - documentHeight / 2 })}
+          onCommit={() => pushSnapshot()}
+        />
       </div>
 
       {/* Scale */}
       <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-            Scale X
-          </label>
-          <Input
-            type="number"
-            step={0.01}
-            min={0.01}
-            value={transform.scaleX.toFixed(2)}
-            onFocus={onInputFocus}
-            onChange={(e) =>
-              clampedUpdate(setTransform, activeLayerId, 'scaleX', e.target.value, 0.01)
-            }
-            onBlur={(e) => {
-              const n = Number(e.target.value)
-              if (Number.isNaN(n) || n < 0.01) setTransform(activeLayerId, { scaleX: 0.01 })
-            }}
-            className="h-8 text-xs"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-            Scale Y
-          </label>
-          <Input
-            type="number"
-            step={0.01}
-            min={0.01}
-            value={transform.scaleY.toFixed(2)}
-            onFocus={onInputFocus}
-            onChange={(e) =>
-              clampedUpdate(setTransform, activeLayerId, 'scaleY', e.target.value, 0.01)
-            }
-            onBlur={(e) => {
-              const n = Number(e.target.value)
-              if (Number.isNaN(n) || n < 0.01) setTransform(activeLayerId, { scaleY: 0.01 })
-            }}
-            className="h-8 text-xs"
-          />
-        </div>
+        <ScrubInput
+          label="Scale X"
+          value={transform.scaleX}
+          step={0.01}
+          min={0.01}
+          precision={2}
+          onChange={(v) => setTransform(activeLayerId, { scaleX: v })}
+          onCommit={() => pushSnapshot()}
+        />
+        <ScrubInput
+          label="Scale Y"
+          value={transform.scaleY}
+          step={0.01}
+          min={0.01}
+          precision={2}
+          onChange={(v) => setTransform(activeLayerId, { scaleY: v })}
+          onCommit={() => pushSnapshot()}
+        />
       </div>
 
       {/* Rotation */}
-      <div>
-        <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
-          Rotation
-        </label>
-        <Input
-          type="number"
-          value={Math.round(((transform.rotation % 360) + 360) % 360)}
-          onFocus={onInputFocus}
-          onChange={(e) => {
-            const n = Number(e.target.value)
-            if (!Number.isNaN(n)) setTransform(activeLayerId, { rotation: n })
-          }}
-          className="h-8 text-xs"
-        />
-      </div>
+      <ScrubInput
+        label="Rotation"
+        value={Math.round(((transform.rotation % 360) + 360) % 360)}
+        step={1}
+        suffix="°"
+        onChange={(v) => setTransform(activeLayerId, { rotation: v })}
+        onCommit={() => pushSnapshot()}
+      />
 
       {/* Opacity */}
       <div>
