@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { Popover as PopoverPrimitive } from 'radix-ui'
+import { cn } from '@/lib/utils'
+import { useResponsive } from '@/hooks/use-responsive'
 
 const PRESETS = [
   '#000000',
@@ -71,6 +73,7 @@ interface ColorPickerProps {
 }
 
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
+  const { isMobile } = useResponsive()
   const [open, setOpen] = useState(false)
   const [localHsv, setLocalHsv] = useState<[number, number, number] | null>(null)
   const [hexInput, setHexInput] = useState(value)
@@ -124,7 +127,10 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
     <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
       <PopoverPrimitive.Trigger asChild>
         <button
-          className="h-8 w-8 shrink-0 cursor-pointer rounded border border-white/12"
+          className={cn(
+            'shrink-0 cursor-pointer rounded border border-white/12',
+            isMobile ? 'h-11 w-11' : 'h-8 w-8',
+          )}
           style={{ backgroundColor: value }}
         />
       </PopoverPrimitive.Trigger>

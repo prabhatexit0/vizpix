@@ -3,6 +3,7 @@ import { useEditorStore } from '@/store'
 import { SliderInput } from '@/components/ui/slider-input'
 import { Button } from '@/components/ui/button'
 import { SlidersHorizontal, X } from 'lucide-react'
+import { useResponsive } from '@/hooks/use-responsive'
 import { findLayerById } from '@/lib/layer-utils'
 
 interface AdjustValues {
@@ -51,6 +52,7 @@ const SECTIONS: { label: string; sliders: SliderDef[] }[] = [
 ]
 
 export function AdjustPanel() {
+  const { isMobile } = useResponsive()
   const activeLayerId = useEditorStore((s) => s.activeLayerId)
   const layer = useEditorStore((s) => {
     if (!s.activeLayerId) return undefined
@@ -174,7 +176,7 @@ export function AdjustPanel() {
   )
 
   return (
-    <div className="relative flex flex-col gap-4 p-3">
+    <div className={`relative flex flex-col p-3 ${isMobile ? 'gap-5' : 'gap-4'}`}>
       {processing && (
         <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden">
           <div className="h-full w-1/3 animate-[shimmer_1s_ease-in-out_infinite] bg-blue-500/70" />

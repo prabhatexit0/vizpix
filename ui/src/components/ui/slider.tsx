@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Slider as SliderPrimitive } from 'radix-ui'
 
 import { cn } from '@/lib/utils'
+import { useResponsive } from '@/hooks/use-responsive'
 
 function Slider({
   className,
@@ -13,6 +14,7 @@ function Slider({
   max = 100,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root>) {
+  const { isMobile } = useResponsive()
   const _values = React.useMemo(
     () => (Array.isArray(value) ? value : Array.isArray(defaultValue) ? defaultValue : [min, max]),
     [value, defaultValue, min, max],
@@ -48,7 +50,10 @@ function Slider({
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
-          className="block size-3 rounded-full border-2 border-blue-500 bg-neutral-900 shadow-sm ring-blue-400/30 transition-all hover:scale-110 hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
+          className={cn(
+            'block rounded-full border-2 border-blue-500 bg-neutral-900 shadow-sm ring-blue-400/30 transition-all hover:scale-110 hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50',
+            isMobile ? 'size-5' : 'size-3',
+          )}
         />
       ))}
     </SliderPrimitive.Root>

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { BLEND_MODES } from '@/lib/constants'
 import type { BlendMode, Fill, FontWeight, TextRun } from '@/store/types'
 import { Layers, Loader2, ImagePlus, Link, Unlink, RotateCcw, X } from 'lucide-react'
+import { useResponsive } from '@/hooks/use-responsive'
 import { computeHistogram, type HistogramData } from '@/lib/histogram-utils'
 import { HistogramDisplay } from './histogram-display'
 import { findLayerById, getLayerDimensions } from '@/lib/layer-utils'
@@ -38,6 +39,7 @@ const COMMON_FONTS = [
 ]
 
 export function PropertiesPanel() {
+  const { isMobile } = useResponsive()
   const activeLayerId = useEditorStore((s) => s.activeLayerId)
   const editingTextLayerId = useEditorStore((s) => s.editingTextLayerId)
   const textSelection = useEditorStore((s) => s.textSelection)
@@ -141,7 +143,7 @@ export function PropertiesPanel() {
 
   return (
     <div
-      className="flex flex-col gap-3 overflow-y-auto p-3"
+      className={`flex flex-col overflow-y-auto p-3 ${isMobile ? 'gap-4' : 'gap-3'}`}
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) {
           ;(document.activeElement as HTMLElement)?.blur?.()
@@ -149,7 +151,7 @@ export function PropertiesPanel() {
       }}
     >
       {/* Position */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className={`grid grid-cols-2 ${isMobile ? 'gap-3' : 'gap-2'}`}>
         <ScrubInput
           label="X"
           value={displayX}
@@ -167,7 +169,7 @@ export function PropertiesPanel() {
       </div>
 
       {/* Scale */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className={`grid grid-cols-2 ${isMobile ? 'gap-3' : 'gap-2'}`}>
         <ScrubInput
           label="Scale X"
           value={transform.scaleX}
@@ -189,7 +191,7 @@ export function PropertiesPanel() {
       </div>
 
       {/* Rotation */}
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-2'}`}>
         <ScrubInput
           label="Rotation"
           value={Math.round(((transform.rotation % 360) + 360) % 360)}
@@ -226,7 +228,7 @@ export function PropertiesPanel() {
           value={layer.blendMode}
           onValueChange={(v) => setBlendMode(activeLayerId, v as BlendMode)}
         >
-          <SelectTrigger className="h-8 text-xs">
+          <SelectTrigger className={`${isMobile ? 'h-11' : 'h-8'} text-xs`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -300,7 +302,7 @@ export function PropertiesPanel() {
               <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
                 Fill
               </label>
-              <div className="flex items-center gap-2">
+              <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-2'}`}>
                 <ColorPicker
                   value={layer.fill.color}
                   onChange={(c) =>
@@ -359,7 +361,7 @@ export function PropertiesPanel() {
                 if (factory) updateShapeProperties(activeLayerId, { fill: factory() as Fill })
               }}
             >
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className={`${isMobile ? 'h-11' : 'h-8'} text-xs`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -391,7 +393,7 @@ export function PropertiesPanel() {
             <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
               Stroke Color
             </label>
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-2'}`}>
               <ColorPicker
                 value={layer.stroke.color}
                 onChange={(c) =>
@@ -463,7 +465,7 @@ export function PropertiesPanel() {
                 }
               }}
             >
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className={`${isMobile ? 'h-11' : 'h-8'} text-xs`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -502,7 +504,7 @@ export function PropertiesPanel() {
             onCommit={() => pushSnapshot()}
           />
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid grid-cols-2 ${isMobile ? 'gap-3' : 'gap-2'}`}>
             <div>
               <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
                 Weight
@@ -514,7 +516,7 @@ export function PropertiesPanel() {
                 value={String(selectionFormatting?.fontWeight ?? layer.fontWeight)}
                 onValueChange={(v) => updateTextProp({ fontWeight: Number(v) as FontWeight })}
               >
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className={`${isMobile ? 'h-11' : 'h-8'} text-xs`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -537,7 +539,7 @@ export function PropertiesPanel() {
                 value={selectionFormatting?.fontStyle ?? layer.fontStyle}
                 onValueChange={(v) => updateTextProp({ fontStyle: v as 'normal' | 'italic' })}
               >
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger className={`${isMobile ? 'h-11' : 'h-8'} text-xs`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -593,7 +595,7 @@ export function PropertiesPanel() {
                 if (factory) updateTextProperties(activeLayerId, { fill: factory() as Fill })
               }}
             >
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className={`${isMobile ? 'h-11' : 'h-8'} text-xs`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -618,7 +620,7 @@ export function PropertiesPanel() {
                 <label className="mb-1 block text-xs tracking-wide text-neutral-500 uppercase">
                   Color{isMixedColor ? ' (Mixed)' : ''}
                 </label>
-                <div className="flex items-center gap-2">
+                <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-2'}`}>
                   <ColorPicker
                     value={colorValue}
                     onChange={(c) =>
@@ -643,7 +645,7 @@ export function PropertiesPanel() {
                 updateTextProperties(activeLayerId, { textAlign: v as 'left' | 'center' | 'right' })
               }
             >
-              <SelectTrigger className="h-8 text-xs">
+              <SelectTrigger className={`${isMobile ? 'h-11' : 'h-8'} text-xs`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -654,7 +656,7 @@ export function PropertiesPanel() {
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid grid-cols-2 ${isMobile ? 'gap-3' : 'gap-2'}`}>
             <ScrubInput
               label="Line H"
               value={layer.lineHeight}
@@ -687,7 +689,7 @@ export function PropertiesPanel() {
           Mask
         </label>
         {layer.mask ? (
-          <div className="flex items-center gap-2">
+          <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-2'}`}>
             <span className="flex-1 text-xs text-neutral-400">
               {layer.mask.width}×{layer.mask.height} {layer.mask.inverted ? '(inverted)' : ''}
             </span>

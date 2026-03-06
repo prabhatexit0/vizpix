@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { useResponsive } from '@/hooks/use-responsive'
 
 interface ScrubInputProps {
   label: string
@@ -24,6 +25,7 @@ export function ScrubInput({
   precision = 0,
   suffix,
 }: ScrubInputProps) {
+  const { isMobile } = useResponsive()
   const [isScrubbing, setIsScrubbing] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
@@ -142,7 +144,10 @@ export function ScrubInput({
           onBlur={() => commitEdit(false)}
           onChange={(e) => setEditValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-7 w-full min-w-0 rounded-md border bg-transparent px-2 text-xs text-neutral-200 transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+          className={cn(
+            'border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full min-w-0 rounded-md border bg-transparent px-2 text-xs text-neutral-200 transition-[color,box-shadow] outline-none focus-visible:ring-[3px]',
+            isMobile ? 'h-11' : 'h-7',
+          )}
         />
         {suffix && !isEditing && (
           <span className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-neutral-500">

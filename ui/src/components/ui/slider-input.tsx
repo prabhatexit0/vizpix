@@ -1,6 +1,8 @@
 import { useCallback, useRef } from 'react'
 import { Slider } from '@/components/ui/slider'
 import { ScrubInput } from '@/components/ui/scrub-input'
+import { useResponsive } from '@/hooks/use-responsive'
+import { cn } from '@/lib/utils'
 
 interface SliderInputProps {
   label?: string
@@ -25,6 +27,7 @@ export function SliderInput({
   precision = 0,
   suffix,
 }: SliderInputProps) {
+  const { isMobile } = useResponsive()
   const dragStartedRef = useRef(false)
 
   const handleSliderChange = useCallback(
@@ -57,7 +60,7 @@ export function SliderInput({
           suffix={suffix}
         />
       )}
-      <div className="flex items-center gap-2">
+      <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-2'}`}>
         <Slider
           value={[value]}
           min={min}
@@ -83,7 +86,10 @@ export function SliderInput({
             onKeyDown={(e) => {
               if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
             }}
-            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-7 w-14 shrink-0 rounded-md border bg-transparent px-2 text-center text-xs text-neutral-200 transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+            className={cn(
+              'border-input focus-visible:border-ring focus-visible:ring-ring/50 w-14 shrink-0 rounded-md border bg-transparent px-2 text-center text-xs text-neutral-200 transition-[color,box-shadow] outline-none focus-visible:ring-[3px]',
+              isMobile ? 'h-11' : 'h-7',
+            )}
           />
         )}
       </div>
