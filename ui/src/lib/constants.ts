@@ -51,7 +51,8 @@ export const ZOOM_MIN = 0.1
 export const ZOOM_MAX = 10
 export const ZOOM_STEP = 0.1
 export const HISTORY_MAX = 30
-export const MOBILE_BREAKPOINT = 1024
+export const PHONE_BREAKPOINT = 768
+export const TABLET_BREAKPOINT = 1024
 
 export const MIN_CANVAS_SIZE = 1
 export const MAX_CANVAS_SIZE = 8192

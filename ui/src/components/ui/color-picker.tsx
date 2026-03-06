@@ -73,7 +73,7 @@ interface ColorPickerProps {
 }
 
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
-  const { isMobile } = useResponsive()
+  const { isDesktop } = useResponsive()
   const [open, setOpen] = useState(false)
   const [localHsv, setLocalHsv] = useState<[number, number, number] | null>(null)
   const [hexInput, setHexInput] = useState(value)
@@ -129,7 +129,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
         <button
           className={cn(
             'shrink-0 cursor-pointer rounded border border-white/12',
-            isMobile ? 'h-11 w-11' : 'h-8 w-8',
+            !isDesktop ? 'h-11 w-11' : 'h-8 w-8',
           )}
           style={{ backgroundColor: value }}
         />

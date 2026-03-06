@@ -11,6 +11,9 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 const MIN_WIDTH = 220
 const MAX_WIDTH = 480
 const DEFAULT_WIDTH = 280
+const TABLET_MIN_WIDTH = 200
+const TABLET_MAX_WIDTH = 320
+const TABLET_DEFAULT_WIDTH = 200
 
 function PanelTabs() {
   const activePanel = useEditorStore((s) => s.activePanel)
@@ -95,12 +98,16 @@ function ResizeHandle({ onResize }: { onResize: (deltaX: number) => void }) {
 }
 
 export function RightPanel() {
-  const { isMobile } = useResponsive()
+  const { isMobile, isTablet } = useResponsive()
   const [width, setWidth] = useState(DEFAULT_WIDTH)
+  const [tabletWidth, setTabletWidth] = useState(TABLET_DEFAULT_WIDTH)
 
   const handleResize = useCallback((dx: number) => {
-    // Dragging left (negative dx) should increase width, right should decrease
     setWidth((w) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, w - dx)))
+  }, [])
+
+  const handleTabletResize = useCallback((dx: number) => {
+    setTabletWidth((w) => Math.min(TABLET_MAX_WIDTH, Math.max(TABLET_MIN_WIDTH, w - dx)))
   }, [])
 
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -137,6 +144,18 @@ export function RightPanel() {
           </DrawerContent>
         </Drawer>
       </>
+    )
+  }
+
+  if (isTablet) {
+    return (
+      <div
+        className="relative flex shrink-0 flex-col border-l border-white/15 bg-neutral-900"
+        style={{ width: tabletWidth }}
+      >
+        <ResizeHandle onResize={handleTabletResize} />
+        <PanelTabs />
+      </div>
     )
   }
 

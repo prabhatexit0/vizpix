@@ -48,7 +48,7 @@ export function Toolbar() {
   const documentBackground = useEditorStore((s) => s.documentBackground)
   const loadDocument = useEditorStore((s) => s.loadDocument)
   const fitToDocument = useEditorStore((s) => s.fitToDocument)
-  const { isMobile } = useResponsive()
+  const { isDesktop } = useResponsive()
   const [canvasSizeOpen, setCanvasSizeOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -299,7 +299,7 @@ export function Toolbar() {
     </>
   )
 
-  if (isMobile) {
+  if (!isDesktop) {
     return (
       <>
         <div className="absolute bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/15 bg-neutral-900/90 px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md">

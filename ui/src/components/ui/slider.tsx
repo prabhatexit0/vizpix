@@ -14,7 +14,7 @@ function Slider({
   max = 100,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root>) {
-  const { isMobile } = useResponsive()
+  const { isDesktop } = useResponsive()
   const _values = React.useMemo(
     () => (Array.isArray(value) ? value : Array.isArray(defaultValue) ? defaultValue : [min, max]),
     [value, defaultValue, min, max],
@@ -52,7 +52,7 @@ function Slider({
           key={index}
           className={cn(
             'block rounded-full border-2 border-blue-500 bg-neutral-900 shadow-sm ring-blue-400/30 transition-all hover:scale-110 hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50',
-            isMobile ? 'size-5' : 'size-3',
+            !isDesktop ? 'size-5' : 'size-3',
           )}
         />
       ))}

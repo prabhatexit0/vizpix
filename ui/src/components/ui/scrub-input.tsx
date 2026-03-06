@@ -25,7 +25,7 @@ export function ScrubInput({
   precision = 0,
   suffix,
 }: ScrubInputProps) {
-  const { isMobile } = useResponsive()
+  const { isDesktop } = useResponsive()
   const [isScrubbing, setIsScrubbing] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
@@ -146,7 +146,7 @@ export function ScrubInput({
           onKeyDown={handleKeyDown}
           className={cn(
             'border-input focus-visible:border-ring focus-visible:ring-ring/50 w-full min-w-0 rounded-md border bg-transparent px-2 text-xs text-neutral-200 transition-[color,box-shadow] outline-none focus-visible:ring-[3px]',
-            isMobile ? 'h-11' : 'h-7',
+            !isDesktop ? 'h-11' : 'h-7',
           )}
         />
         {suffix && !isEditing && (

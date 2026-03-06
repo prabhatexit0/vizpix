@@ -27,7 +27,7 @@ export function SliderInput({
   precision = 0,
   suffix,
 }: SliderInputProps) {
-  const { isMobile } = useResponsive()
+  const { isDesktop } = useResponsive()
   const dragStartedRef = useRef(false)
 
   const handleSliderChange = useCallback(
@@ -60,7 +60,7 @@ export function SliderInput({
           suffix={suffix}
         />
       )}
-      <div className={`flex items-center ${isMobile ? 'gap-3' : 'gap-2'}`}>
+      <div className={`flex items-center ${!isDesktop ? 'gap-3' : 'gap-2'}`}>
         <Slider
           value={[value]}
           min={min}
@@ -88,7 +88,7 @@ export function SliderInput({
             }}
             className={cn(
               'border-input focus-visible:border-ring focus-visible:ring-ring/50 w-14 shrink-0 rounded-md border bg-transparent px-2 text-center text-xs text-neutral-200 transition-[color,box-shadow] outline-none focus-visible:ring-[3px]',
-              isMobile ? 'h-11' : 'h-7',
+              !isDesktop ? 'h-11' : 'h-7',
             )}
           />
         )}
