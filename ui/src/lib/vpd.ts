@@ -62,6 +62,8 @@ interface VpdTextEntry extends VpdLayerBase {
   textAlign?: string
   lineHeight?: number
   letterSpacing?: number
+  boxWidth?: number | null
+  boxHeight?: number | 'auto'
   maxWidth?: number | null
 }
 
@@ -199,7 +201,8 @@ function serializeLayer(l: Layer, files: Record<string, Uint8Array>): VpdLayerEn
       if (l.textAlign !== 'left') entry.textAlign = l.textAlign
       if (l.lineHeight !== 1.4) entry.lineHeight = l.lineHeight
       if (l.letterSpacing !== 0) entry.letterSpacing = l.letterSpacing
-      if (l.maxWidth !== null) entry.maxWidth = l.maxWidth
+      if (l.boxWidth !== null) entry.boxWidth = l.boxWidth
+      if (l.boxHeight !== 'auto') entry.boxHeight = l.boxHeight
       return entry
     }
     case 'group': {
@@ -333,7 +336,8 @@ async function deserializeLayer(
         textAlign: (txtEntry.textAlign ?? 'left') as TextLayer['textAlign'],
         lineHeight: txtEntry.lineHeight ?? 1.4,
         letterSpacing: txtEntry.letterSpacing ?? 0,
-        maxWidth: txtEntry.maxWidth ?? null,
+        boxWidth: txtEntry.boxWidth ?? txtEntry.maxWidth ?? null,
+        boxHeight: txtEntry.boxHeight ?? 'auto',
       } as TextLayer
     }
     case 'group': {

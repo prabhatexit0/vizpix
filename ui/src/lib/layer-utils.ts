@@ -83,10 +83,10 @@ function measureTextLayer(layer: Layer & { type: 'text' }): { width: number; hei
   const ctx = canvas.getContext('2d')!
   ctx.font = `${layer.fontStyle} ${layer.fontWeight} ${layer.fontSize}px ${layer.fontFamily}`
 
-  if (layer.maxWidth !== null) {
-    const lines = wrapText(ctx, layer.content, layer.maxWidth)
+  if (layer.boxWidth !== null) {
+    const lines = wrapText(ctx, layer.content, layer.boxWidth)
     const lineH = layer.fontSize * layer.lineHeight
-    return { width: layer.maxWidth, height: lines.length * lineH }
+    return { width: layer.boxWidth, height: lines.length * lineH }
   }
 
   const lines = layer.content.split('\n')
@@ -203,7 +203,7 @@ export function measureCursorPosition(
   cursorIndex: number,
 ): { localX: number; localY: number } {
   const ctx = createTextMeasureCtx(layer)
-  const lineEntries = splitLinesWithOffsets(ctx, layer.content, layer.maxWidth)
+  const lineEntries = splitLinesWithOffsets(ctx, layer.content, layer.boxWidth)
 
   const lineH = layer.fontSize * layer.lineHeight
   const totalHeight = lineEntries.length * lineH
@@ -227,8 +227,8 @@ export function measureCursorPosition(
 
   // Compute textBlockWidth (same as renderTextLayer)
   let textBlockWidth: number
-  if (layer.maxWidth !== null) {
-    textBlockWidth = layer.maxWidth
+  if (layer.boxWidth !== null) {
+    textBlockWidth = layer.boxWidth
   } else {
     textBlockWidth = Math.max(...lineEntries.map((e) => ctx.measureText(e.text).width))
     if (!isFinite(textBlockWidth)) textBlockWidth = 0
@@ -270,7 +270,7 @@ export function findCursorIndexFromLocal(
   localY: number,
 ): number {
   const ctx = createTextMeasureCtx(layer)
-  const lineEntries = splitLinesWithOffsets(ctx, layer.content, layer.maxWidth)
+  const lineEntries = splitLinesWithOffsets(ctx, layer.content, layer.boxWidth)
 
   if (lineEntries.length === 0) return 0
 
@@ -286,8 +286,8 @@ export function findCursorIndexFromLocal(
 
   // Compute textBlockWidth
   let textBlockWidth: number
-  if (layer.maxWidth !== null) {
-    textBlockWidth = layer.maxWidth
+  if (layer.boxWidth !== null) {
+    textBlockWidth = layer.boxWidth
   } else {
     textBlockWidth = Math.max(...lineEntries.map((e) => ctx.measureText(e.text).width))
     if (!isFinite(textBlockWidth)) textBlockWidth = 0

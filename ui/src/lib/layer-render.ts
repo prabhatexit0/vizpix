@@ -184,7 +184,7 @@ function renderTextLayer(
     textAlign,
     lineHeight,
     letterSpacing,
-    maxWidth,
+    boxWidth,
   } = layer
   ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`
   ctx.textAlign = textAlign
@@ -196,8 +196,8 @@ function renderTextLayer(
 
   // Determine lines
   let lines: string[]
-  if (maxWidth !== null) {
-    lines = wrapText(ctx as CanvasRenderingContext2D, content, maxWidth)
+  if (boxWidth !== null) {
+    lines = wrapText(ctx as CanvasRenderingContext2D, content, boxWidth)
   } else {
     lines = content.split('\n')
   }
@@ -207,8 +207,8 @@ function renderTextLayer(
 
   // Calculate text block width for alignment offset
   let textBlockWidth: number
-  if (maxWidth !== null) {
-    textBlockWidth = maxWidth
+  if (boxWidth !== null) {
+    textBlockWidth = boxWidth
   } else {
     textBlockWidth = Math.max(...lines.map((l) => ctx.measureText(l).width))
   }

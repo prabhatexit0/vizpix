@@ -123,7 +123,8 @@ export interface TextLayer extends LayerBase {
   textAlign: 'left' | 'center' | 'right'
   lineHeight: number
   letterSpacing: number
-  maxWidth: number | null
+  boxWidth: number | null
+  boxHeight: number | 'auto'
 }
 
 export interface GroupLayer extends LayerBase {
@@ -203,7 +204,8 @@ export interface LayersSlice {
         | 'textAlign'
         | 'lineHeight'
         | 'letterSpacing'
-        | 'maxWidth'
+        | 'boxWidth'
+        | 'boxHeight'
       >
     >,
   ) => void
