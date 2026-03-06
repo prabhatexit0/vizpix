@@ -172,6 +172,19 @@ function renderShapeLayer(
   }
 }
 
+function renderDecoration(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  decoration: 'underline' | 'strikethrough',
+  x: number,
+  y: number,
+  width: number,
+  fontSize: number,
+): void {
+  const thickness = Math.max(1, fontSize / 16)
+  const dy = decoration === 'underline' ? y + fontSize * 0.9 : y + fontSize * 0.35
+  ctx.fillRect(x, dy, width, thickness)
+}
+
 function getLayoutTotalHeight(layout: TextLine[]): number {
   if (layout.length === 0) return 0
   const last = layout[layout.length - 1]
@@ -234,6 +247,10 @@ function renderTextLayer(
           ;(tctx as unknown as CanvasRenderingContext2D).letterSpacing = `${seg.letterSpacing}px`
         }
         tctx.fillText(seg.text, x, 2 + line.yOffset)
+        const dec = seg.run.textDecoration
+        if (dec && dec !== 'none') {
+          renderDecoration(tctx, dec, x, 2 + line.yOffset, seg.width, seg.fontSize)
+        }
         x += seg.width
       }
     }
@@ -268,6 +285,10 @@ function renderTextLayer(
           ctx.fillStyle = '#ffffff'
         }
         ctx.fillText(seg.text, x, yStart + line.yOffset)
+        const dec = seg.run.textDecoration
+        if (dec && dec !== 'none') {
+          renderDecoration(ctx, dec, x, yStart + line.yOffset, seg.width, seg.fontSize)
+        }
         x += seg.width
       }
     }
