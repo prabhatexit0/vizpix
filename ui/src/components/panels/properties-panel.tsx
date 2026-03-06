@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useEditorStore } from '@/store'
 import { Input } from '@/components/ui/input'
 import {
@@ -28,6 +28,28 @@ export function PropertiesPanel() {
   const setLayerMask = useEditorStore((s) => s.setLayerMask)
   const removeLayerMask = useEditorStore((s) => s.removeLayerMask)
   const invertLayerMask = useEditorStore((s) => s.invertLayerMask)
+  const pushSnapshot = useEditorStore((s) => s.pushSnapshot)
+
+  const sliderDragRef = useRef(false)
+
+  const onInputFocus = useCallback(() => {
+    pushSnapshot()
+  }, [pushSnapshot])
+
+  const onSliderChange = useCallback(
+    ([v]: number[]) => {
+      if (!sliderDragRef.current) {
+        pushSnapshot()
+        sliderDragRef.current = true
+      }
+      setOpacity(activeLayerId!, Math.max(0, Math.min(100, v)) / 100)
+    },
+    [pushSnapshot, setOpacity, activeLayerId],
+  )
+
+  const onSliderCommit = useCallback(() => {
+    sliderDragRef.current = false
+  }, [])
 
   const clampedUpdate = useCallback(
     (
@@ -101,6 +123,7 @@ export function PropertiesPanel() {
           <Input
             type="number"
             value={Math.round(transform.x)}
+            onFocus={onInputFocus}
             onChange={(e) => setTransform(activeLayerId, { x: Number(e.target.value) })}
             className="h-8 text-xs"
           />
@@ -110,6 +133,7 @@ export function PropertiesPanel() {
           <Input
             type="number"
             value={Math.round(transform.y)}
+            onFocus={onInputFocus}
             onChange={(e) => setTransform(activeLayerId, { y: Number(e.target.value) })}
             className="h-8 text-xs"
           />
@@ -127,6 +151,7 @@ export function PropertiesPanel() {
             step={0.01}
             min={0.01}
             value={transform.scaleX.toFixed(2)}
+            onFocus={onInputFocus}
             onChange={(e) =>
               clampedUpdate(setTransform, activeLayerId, 'scaleX', e.target.value, 0.01)
             }
@@ -146,6 +171,7 @@ export function PropertiesPanel() {
             step={0.01}
             min={0.01}
             value={transform.scaleY.toFixed(2)}
+            onFocus={onInputFocus}
             onChange={(e) =>
               clampedUpdate(setTransform, activeLayerId, 'scaleY', e.target.value, 0.01)
             }
@@ -166,6 +192,7 @@ export function PropertiesPanel() {
         <Input
           type="number"
           value={Math.round(((transform.rotation % 360) + 360) % 360)}
+          onFocus={onInputFocus}
           onChange={(e) => {
             const n = Number(e.target.value)
             if (!Number.isNaN(n)) setTransform(activeLayerId, { rotation: n })
@@ -184,7 +211,8 @@ export function PropertiesPanel() {
           min={0}
           max={100}
           step={1}
-          onValueChange={([v]) => setOpacity(activeLayerId, Math.max(0, Math.min(100, v)) / 100)}
+          onValueChange={onSliderChange}
+          onValueCommit={onSliderCommit}
         />
       </div>
 
@@ -231,6 +259,7 @@ export function PropertiesPanel() {
                 type="number"
                 min={1}
                 value={layer.width}
+                onFocus={onInputFocus}
                 onChange={(e) =>
                   clampedUpdate(updateShapeProperties, activeLayerId, 'width', e.target.value, 1)
                 }
@@ -249,6 +278,7 @@ export function PropertiesPanel() {
                 type="number"
                 min={1}
                 value={layer.height}
+                onFocus={onInputFocus}
                 onChange={(e) =>
                   clampedUpdate(updateShapeProperties, activeLayerId, 'height', e.target.value, 1)
                 }
@@ -349,6 +379,7 @@ export function PropertiesPanel() {
                 type="number"
                 value={layer.stroke.width}
                 min={0}
+                onFocus={onInputFocus}
                 onChange={(e) =>
                   updateShapeProperties(activeLayerId, {
                     stroke: { ...layer.stroke, width: Number(e.target.value) },
@@ -384,6 +415,7 @@ export function PropertiesPanel() {
                 type="number"
                 value={layer.cornerRadius}
                 min={0}
+                onFocus={onInputFocus}
                 onChange={(e) =>
                   updateShapeProperties(activeLayerId, { cornerRadius: Number(e.target.value) })
                 }
@@ -433,6 +465,7 @@ export function PropertiesPanel() {
                 type="number"
                 value={layer.fontSize}
                 min={1}
+                onFocus={onInputFocus}
                 onChange={(e) =>
                   updateTextProperties(activeLayerId, { fontSize: Number(e.target.value) })
                 }
@@ -545,6 +578,7 @@ export function PropertiesPanel() {
                 type="number"
                 step={0.1}
                 value={layer.lineHeight}
+                onFocus={onInputFocus}
                 onChange={(e) =>
                   updateTextProperties(activeLayerId, { lineHeight: Number(e.target.value) })
                 }
@@ -558,6 +592,7 @@ export function PropertiesPanel() {
               <Input
                 type="number"
                 value={layer.letterSpacing}
+                onFocus={onInputFocus}
                 onChange={(e) =>
                   updateTextProperties(activeLayerId, { letterSpacing: Number(e.target.value) })
                 }
