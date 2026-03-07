@@ -18,7 +18,7 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Track two pointers in a Map<pointerId, {x,y}>. On pointermove, if two pointers are active, calculate distance between them. Compare to previous distance for zoom factor. Midpoint between fingers is the zoom center. Use the existing store.zoom(factor, centerX, centerY) method. Make sure to update both pointers on move to avoid jitter."
     },
     {
@@ -35,7 +35,7 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Combine with US-601's two-pointer tracking. While two pointers are active: zoom by distance change AND pan by midpoint change. Both happen in the same pointermove handler. Use store.pan(dx, dy) for the pan delta."
     },
     {
@@ -52,7 +52,7 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Use Math.atan2 to compute angle between two pointer positions. Track angle delta from previous frame. Apply via setTransform(layerId, { rotation: current + delta }). The 200ms hold prevents accidental rotation when the user just wants to pinch-zoom. Optional: snap to 0/90/180/270 when close (within 5°)."
     },
     {
@@ -70,7 +70,7 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "The existing Vaul Drawer component is already in the project (components/ui/drawer.tsx). RightPanel already has isMobile from useResponsive(). The desktop layout stays exactly as-is. On mobile, wrap the panel content in a Drawer with direction='right'. Use an overlay with backdrop-blur."
     },
     {
@@ -87,7 +87,7 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "The mobile toolbar already exists but shows ALL tools which is cramped. Trim to essentials + overflow. Use the existing Popover component for the overflow menu. Safe area insets handle iPhone notch/home indicator area."
     },
     {
@@ -105,7 +105,7 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Most of this already works because we use Pointer Events. The main addition is the long-press context menu. Implement with a setTimeout on pointerdown, cleared on pointermove (>10px) or pointerup. Use Radix ContextMenu or a custom Popover for the menu."
     },
     {
@@ -122,7 +122,7 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Some dialogs already have the Drawer pattern (ExportDialog). Apply the same pattern to CanvasSizeDialog, ShortcutsDialog, and ConfirmDialog. Create a shared ResponsiveDialog wrapper if it reduces duplication."
     },
     {
@@ -139,7 +139,7 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "The ScrubInput and SliderInput from the slider-ux branch should accept a size prop or check isMobile internally. For sliders, override the thumb size via className on mobile. Keep desktop sizes compact."
     },
     {
@@ -156,7 +156,7 @@
         "Typecheck passes"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Currently there's only one breakpoint (1024px). Adding 768px gives us a proper three-tier responsive system. Tablets can show the right panel as a sidebar since they have enough width, but the toolbar should float at the bottom since vertical space is more limited."
     },
     {
@@ -174,7 +174,7 @@
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "Safe area insets prevent content from being hidden behind the iPhone notch or home bar indicator. Use Tailwind's pb-[env(safe-area-inset-bottom)] or CSS custom properties. The PWA manifest is a nice bonus that makes the app installable on mobile home screens."
     },
     {
@@ -191,7 +191,7 @@
         "Typecheck passes"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": "The main challenge is the virtual keyboard obscuring the text being edited. Use window.visualViewport.height to detect keyboard presence and adjust the canvas viewport (pan up) to keep the editing text visible. Reset pan when editing ends."
     },
     {
@@ -207,7 +207,7 @@
         "Typecheck passes"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": "Simple overlay with 4 gesture illustrations. Use CSS animations for the finger gesture icons. Store 'gestures-shown' in localStorage to only show once. Keep it lightweight — no complex onboarding flow."
     }
   ]

@@ -135,11 +135,18 @@ function pointInPolygon(px: number, py: number, points: { x: number; y: number }
   return inside
 }
 
-// Module-level callback for text cursor positioning during inline editing
-let textCursorClickCallback: ((wx: number, wy: number) => void) | null = null
+// Module-level callbacks for text cursor positioning during inline editing
+let textCursorClickCallback: ((wx: number, wy: number, shiftKey: boolean) => void) | null = null
+let textCursorDragCallback: ((wx: number, wy: number) => void) | null = null
 
-export function setTextCursorClickCallback(cb: ((wx: number, wy: number) => void) | null) {
+export function setTextCursorClickCallback(
+  cb: ((wx: number, wy: number, shiftKey: boolean) => void) | null,
+) {
   textCursorClickCallback = cb
+}
+
+export function setTextCursorDragCallback(cb: ((wx: number, wy: number) => void) | null) {
+  textCursorDragCallback = cb
 }
 
 function hitTestLayers(wx: number, wy: number) {
@@ -259,6 +266,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
   const drawPreviewRef = useRef<DrawPreview | null>(null)
   const lastClickRef = useRef<{ time: number; layerId: string | null }>({ time: 0, layerId: null })
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const textDraggingRef = useRef(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
 
   // Multi-touch tracking for pinch-to-zoom, two-finger pan, and rotation
@@ -355,11 +363,13 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
         if (editingTextLayerId) {
           const hitId = hitTestLayersWithPadding(wx, wy, hitPadding)
           if (hitId === editingTextLayerId) {
-            textCursorClickCallback?.(wx, wy)
-            ptr.down = false
+            textCursorClickCallback?.(wx, wy, e.shiftKey)
+            // Keep ptr.down true so onPointerMove can handle drag-to-select
+            textDraggingRef.current = true
             return
           }
           // Click outside the editing layer → commit
+          textDraggingRef.current = false
           useEditorStore.getState().setEditingTextLayerId(null)
         }
 
@@ -505,6 +515,13 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
       const ptr = ptrRef.current
       if (!ptr.down) return
 
+      // Handle drag-to-select in text editing mode
+      if (textDraggingRef.current) {
+        const { wx, wy } = screenToWorld(e.clientX, e.clientY, canvas)
+        textCursorDragCallback?.(wx, wy)
+        return
+      }
+
       // Cancel long-press if finger moved >10px
       if (longPressTimerRef.current) {
         const moveX = e.clientX - ptr.startX
@@ -613,6 +630,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
       }
 
       ptrRef.current.down = false
+      textDraggingRef.current = false
     },
     [canvasRef, getEffectiveTool],
   )
@@ -665,8 +683,9 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
       const hitId = hitTestLayers(wx, wy)
 
       if (hitId) {
-        const layer = findLayerById(useEditorStore.getState().layers, hitId)
-        setHoverCursor(layer?.type === 'text' ? 'text' : null)
+        const { editingTextLayerId } = useEditorStore.getState()
+        // Only show text cursor when hovering the layer being edited
+        setHoverCursor(editingTextLayerId && hitId === editingTextLayerId ? 'text' : null)
       } else {
         setHoverCursor(null)
       }

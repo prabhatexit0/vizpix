@@ -15,7 +15,10 @@ import {
   insertTextAtCursor,
   deleteTextAtRange,
 } from '@/lib/rich-text-utils'
-import { setTextCursorClickCallback } from '@/hooks/use-canvas-interactions'
+import {
+  setTextCursorClickCallback,
+  setTextCursorDragCallback,
+} from '@/hooks/use-canvas-interactions'
 import { useVirtualKeyboard } from '@/hooks/use-virtual-keyboard'
 import { TextFormatToolbar } from './text-format-toolbar'
 
@@ -105,22 +108,29 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
     setCanvasRect({ width: rect.width, height: rect.height })
   }, [canvasRef, viewport])
 
-  // Focus textarea and select all on mount
+  // Focus textarea and place cursor at end on mount (don't select all)
   useEffect(() => {
     const ta = textareaRef.current
     if (!ta || !layer) return
     ta.value = layer.content
     ta.focus()
-    ta.select()
-    setTextSelection({ start: 0, end: layer.content.length })
+    const len = layer.content.length
+    ta.selectionStart = len
+    ta.selectionEnd = len
+    // Defer state updates to avoid synchronous setState in effect
+    queueMicrotask(() => {
+      setCursorIndex(len)
+      setSelectionEnd(len)
+      setTextSelection({ start: len, end: len })
+    })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Register click-to-cursor callback
+  // Register click-to-cursor callback (with double-click word selection)
+  const lastCursorClickRef = useRef<{ time: number; idx: number }>({ time: 0, idx: -1 })
   useEffect(() => {
     if (!layer) return
-    const callback = (wx: number, wy: number) => {
+    const callback = (wx: number, wy: number, shiftKey: boolean) => {
       const { scaleX, scaleY, rotation } = layer.transform
-      // Convert world coords to layer-local coords
       const dx = wx - layer.transform.x
       const dy = wy - layer.transform.y
       const rad = (-rotation * Math.PI) / 180
@@ -130,6 +140,45 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
       const localY = (dx * sin + dy * cos) / scaleY
 
       const idx = findCursorIndexFromLocal(layer, localX, localY)
+      const now = Date.now()
+      const last = lastCursorClickRef.current
+      const content = layer.content
+
+      // Double-click within editing: select the word at click position
+      if (now - last.time < 400 && Math.abs(idx - last.idx) <= 1) {
+        let wordStart = idx
+        let wordEnd = idx
+        while (wordStart > 0 && /\S/.test(content[wordStart - 1])) wordStart--
+        while (wordEnd < content.length && /\S/.test(content[wordEnd])) wordEnd++
+        if (wordStart < wordEnd) {
+          setCursorIndex(wordStart)
+          setSelectionEnd(wordEnd)
+          setTextSelection({ start: wordStart, end: wordEnd })
+          const ta = textareaRef.current
+          if (ta) {
+            ta.selectionStart = wordStart
+            ta.selectionEnd = wordEnd
+            ta.focus()
+          }
+          lastCursorClickRef.current = { time: 0, idx: -1 }
+          return
+        }
+      }
+      lastCursorClickRef.current = { time: now, idx }
+
+      // Shift+click: extend selection from current cursor to click position
+      if (shiftKey) {
+        setSelectionEnd(idx)
+        setTextSelection({ start: cursorIndex, end: idx })
+        const ta = textareaRef.current
+        if (ta) {
+          ta.selectionStart = Math.min(cursorIndex, idx)
+          ta.selectionEnd = Math.max(cursorIndex, idx)
+          ta.focus()
+        }
+        return
+      }
+
       setCursorIndex(idx)
       setSelectionEnd(idx)
       setTextSelection({ start: idx, end: idx })
@@ -141,8 +190,34 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
       }
     }
     setTextCursorClickCallback(callback)
-    return () => setTextCursorClickCallback(null)
-  }, [layer, setTextSelection])
+
+    // Drag callback: update selection end as user drags
+    const dragCallback = (wx: number, wy: number) => {
+      const { scaleX, scaleY, rotation } = layer.transform
+      const dx = wx - layer.transform.x
+      const dy = wy - layer.transform.y
+      const rad = (-rotation * Math.PI) / 180
+      const cos = Math.cos(rad)
+      const sin = Math.sin(rad)
+      const localX = (dx * cos - dy * sin) / scaleX
+      const localY = (dx * sin + dy * cos) / scaleY
+
+      const idx = findCursorIndexFromLocal(layer, localX, localY)
+      setSelectionEnd(idx)
+      setTextSelection({ start: cursorIndex, end: idx })
+      const ta = textareaRef.current
+      if (ta) {
+        ta.selectionStart = Math.min(cursorIndex, idx)
+        ta.selectionEnd = Math.max(cursorIndex, idx)
+      }
+    }
+    setTextCursorDragCallback(dragCallback)
+
+    return () => {
+      setTextCursorClickCallback(null)
+      setTextCursorDragCallback(null)
+    }
+  }, [layer, setTextSelection, cursorIndex])
 
   const commit = useCallback(() => {
     if (committedRef.current) return
@@ -221,13 +296,32 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
       newRuns = deleteTextAtRange(oldRuns, deleteStart, deleteEnd)
     }
 
+    // Measure width before update for left-edge pinning
+    const oldDims = layer.boxWidth === null ? getLayerDimensions(layer) : null
+
+    const plainText = getPlainText(newRuns)
     const { layers } = useEditorStore.getState()
-    useEditorStore.setState({
-      layers: updateLayerInTree(layers, layerId, (l) => {
-        if (l.type !== 'text') return l
-        return { ...l, runs: newRuns, content: getPlainText(newRuns) }
-      }),
+    const updatedLayers = updateLayerInTree(layers, layerId, (l) => {
+      if (l.type !== 'text') return l
+      return { ...l, runs: newRuns, content: plainText }
     })
+    useEditorStore.setState({ layers: updatedLayers })
+
+    // For auto-width text, pin the leading edge by shifting transform.x
+    // Left-aligned: pin left edge. Right-aligned: pin right edge. Center: no shift needed.
+    if (oldDims && layer.textAlign !== 'center') {
+      const updatedLayer = findLayerById(updatedLayers, layerId)
+      if (updatedLayer?.type === 'text') {
+        const newDims = getLayerDimensions(updatedLayer)
+        const widthDelta = newDims.width - oldDims.width
+        if (widthDelta !== 0) {
+          const shift = layer.textAlign === 'left' ? widthDelta / 2 : -widthDelta / 2
+          useEditorStore.getState().setTransform(layerId, {
+            x: layer.transform.x + shift * layer.transform.scaleX,
+          })
+        }
+      }
+    }
 
     const start = ta.selectionStart ?? 0
     const end = ta.selectionEnd ?? start
@@ -512,8 +606,8 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
           selectionEnd={selectionEnd}
         />
       )}
-      {/* Blinking caret overlay */}
-      {caretStyle && <div style={caretStyle} />}
+      {/* Blinking caret overlay (hidden when there's a selection) */}
+      {caretStyle && cursorIndex === selectionEnd && <div style={caretStyle} />}
     </>
   )
 }

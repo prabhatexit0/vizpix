@@ -1,79 +1,117 @@
 # Ralph Progress Log
-Started: Sat Mar  7 04:00:53 IST 2026
+Started: Sat Mar  7 04:19:16 IST 2026
 ---
+## US-601: Add pinch-to-zoom gesture on canvas ✅
+- Added multi-touch pointer tracking via Map<pointerId, {x,y}> in use-canvas-interactions.ts
+- Two-finger pinch calculates distance change for zoom factor, midpoint for zoom center
+- Uses existing store.zoom(factor, centerX, centerY) method
+- Single-finger interactions unchanged, desktop unaffected
+- Canvas touch-action already 'none', respects ZOOM_MIN/ZOOM_MAX via store
 
-## US-501: Create ScrubInput component (DONE)
-- Created `ui/src/components/ui/scrub-input.tsx`
-- Compound label+input with drag-on-label scrubbing via pointer capture
-- Shift=10x, Alt=0.1x sensitivity modifiers
-- Arrow Up/Down stepping, Enter commit, Escape revert
-- Select-all on focus, configurable min/max/step/precision/suffix
-- Typecheck + lint passes
+## US-602: Add two-finger pan gesture on canvas ✅
+- Added lastPinchMidRef to track midpoint between two touch pointers
+- On pointermove with two fingers, calculates midpoint delta and calls store.pan(dx, dy)
+- Pan and zoom happen simultaneously during pinch gestures
+- Single-finger still selects/moves layers, desktop behavior unchanged
+- Midpoint ref resets on pointer up when fewer than 2 fingers remain
 
-## US-503: Replace transform inputs with ScrubInput (DONE)
-- Replaced X, Y, Scale X, Scale Y, Rotation in properties-panel.tsx with ScrubInput
-- Labels are scrubbable via drag, undo snapshot pushed once at scrub start
-- Browser-tested: all inputs render correctly with proper values
-- Typecheck + lint passes
+## US-603: Add two-finger rotation gesture for selected layer ✅
+- Added angle tracking (lastPinchAngleRef) and rotation gesture state refs
+- On pointerdown with 2 fingers: hit-tests both fingers against selected layer
+- If both fingers hit the layer, starts a 200ms hold timer before activating rotation
+- On pointermove: calculates angle delta via Math.atan2, applies to layer rotation
+- Snaps to 0/90/180/270 when within 5 degrees for precision
+- Quick pinch-zoom (>15% distance change) cancels rotation hold to prevent accidental rotation
+- Pushes undo snapshot on first rotation delta for reversibility
+- On empty canvas, two fingers pan/zoom as before (no rotation)
 
-## US-512: Add rotation dial (DONE)
-- Created `ui/src/components/ui/rotation-dial.tsx` — 32x32 SVG circular control
-- Dot indicates current angle, drag to rotate, Shift snaps to 15deg
-- Integrated next to rotation ScrubInput in properties panel
-- Browser-tested: dial renders correctly
-- Typecheck + lint passes
+## US-604: Responsive layout — collapsible right panel on mobile ✅
+- Changed mobile right panel from bottom drawer to right-side Vaul Drawer (direction="right")
+- Floating button on right edge opens/closes the drawer (PanelRight icon)
+- Drawer overlays the canvas, does not push it
+- Auto-opens when a layer is selected via Zustand store subscription
+- Auto-closes when layer is deselected (activeLayerId becomes null)
+- User can manually open/close; swipe right to dismiss (Vaul built-in)
+- Desktop layout unchanged (fixed sidebar with resize handle)
+- useResponsive() hook drives the layout switch at MOBILE_BREAKPOINT
 
-## US-511: Improve adjust panel sliders (DONE)
-- Replaced all Slider with SliderInput in adjust-panel.tsx
-- Labels are scrubbable, values are editable
-- Double-click any slider area to reset to default
-- Removed unused format property from SliderDef
-- Typecheck + lint passes
+## US-605: Mobile toolbar — compact floating bar with essential tools only ✅
+- Mobile toolbar now shows 6 essential buttons: Pointer, Rectangle, Ellipse, Text, Undo, Redo
+- Added "..." overflow button using Radix Popover with a 4-column grid layout
+- Overflow contains: Hand, Zoom, Crop, Add Image, Save, Open, Canvas Size, Export
+- Each overflow item has icon + label for clarity
+- Overflow button highlights blue when open or when an overflow tool is active
+- All touch targets are min 44x44px
+- Toolbar positioned at bottom center with safe-area-inset-bottom padding
+- Desktop toolbar completely unchanged (vertical sidebar with all tools)
 
-## US-510: Add dimension inputs with constrain toggle (DONE)
-- Replaced read-only W/H with ScrubInput showing actual pixel dimensions
-- Added link/unlink toggle between W and H for proportional constraint
-- Constraint state per-session (useState), not per-layer
-- Removed unused clampedUpdate helper
-- Typecheck + lint passes
+## US-606: Touch-friendly layer selection and manipulation on canvas ✅
+- Added long-press (500ms) context menu for touch devices on layers
+- Context menu shows: Duplicate, Lock/Unlock, Edit (text only), Delete
+- Menu positioned near touch point, clamped to viewport bounds
+- Timer cancels on pointer move >10px or pointer up
+- Expanded hit test area by 8px on touch devices via hitTestLayerWithPadding
+- Tests surrounding points in 8 directions for expanded hit detection
+- Created TouchContextMenu component in components/canvas/touch-context-menu.tsx
+- Integrated into EditorCanvas with contextMenu/dismissContextMenu from hook
+- Existing tap-to-select, drag-to-move, double-tap-to-edit all work unchanged
 
-## US-509: Input focus management (DONE)
-- Select-all-on-focus: ScrubInput uses select() in rAF, SliderInput uses e.target.select()
-- Tab/Shift+Tab: native browser behavior between input elements
-- Double-click on input: only selects text, scrubbing is only on labels
-- No additional code changes needed — requirements met by existing ScrubInput/SliderInput
+## US-607: Mobile-friendly dialogs — use Drawer for all modal content ✅
+- ShortcutsDialog now uses Vaul Drawer (bottom sheet) on mobile, Dialog on desktop
+- Extracted ShortcutsList component to share between both layouts
+- ConfirmDialog now uses Vaul Drawer on mobile with DrawerFooter for actions
+- ExportDialog already had Drawer pattern — verified working
+- CanvasSizeDialog already had Drawer pattern — verified working
+- All bottom drawers have visible drag handle via drawer.tsx component
+- All drawers dismissible by swiping down or tapping outside (Vaul built-in)
 
-## US-508: Improve color picker (DONE)
-- Created `ui/src/components/ui/color-picker.tsx` with HSV popover
-- SV plane, hue slider, hex input, 10 preset swatches
-- Replaced native <input type=color> in shape fill, stroke color, text color
-- Browser-tested: swatches render correctly
-- Typecheck + lint passes
+## US-608: Touch-optimized properties panel controls ✅
+- ScrubInput inputs: h-7 (28px) → h-11 (44px) on mobile via useResponsive()
+- SliderInput standalone inputs: h-7 → h-11 on mobile
+- Slider thumbs: size-3 (12px) → size-5 (20px) on mobile for easier grabbing
+- ColorPicker trigger swatch: h-8/w-8 → h-11/w-11 (44x44px) on mobile
+- All SelectTrigger dropdowns in properties panel: h-8 → h-11 on mobile
+- Button/control spacing: gap-2 → gap-3 on mobile in properties and adjust panels
+- All changes conditional via useResponsive() hook, desktop layout unchanged
 
-## US-507: Add SliderInput for stroke width (DONE)
-- Replaced stroke width plain input with SliderInput (0-50px, step 0.5)
-- Separated stroke color to its own row
-- Typecheck + lint passes
+## US-609: Add mobile breakpoint for tablet (768px) and refine layout ✅
+- Added PHONE_BREAKPOINT=768, renamed MOBILE_BREAKPOINT to TABLET_BREAKPOINT=1024
+- useResponsive() now returns { isMobile, isTablet, isDesktop } with stable snapshot caching
+- isMobile: < 768px (phone), isTablet: 768-1023px, isDesktop: >= 1024px
+- Toolbar: floating bottom bar on phone+tablet (!isDesktop), sidebar on desktop
+- Right panel: drawer on phone (isMobile), narrow sidebar (200px min, 320px max) on tablet, normal sidebar on desktop
+- Touch-optimized controls (larger targets, spacing): active on phone+tablet via !isDesktop
+- Dialogs: drawer on phone only (isMobile), regular dialog on tablet+desktop
+- Desktop layout completely unchanged — all pre-commit checks pass
 
-## US-506: Add ScrubInput for text properties (DONE)
-- Replaced font size, line height, letter spacing with ScrubInput
-- Selection-aware font size uses updateTextProp
-- Typecheck + lint passes
+## US-610: Add safe area insets and PWA meta tags for mobile ✅
+- Added viewport-fit=cover to viewport meta tag enabling safe area CSS env variables
+- Added apple-mobile-web-app-capable and apple-mobile-web-app-status-bar-style meta tags
+- Added theme-color meta tag (#0a0a0a) matching app background
+- Created manifest.json for PWA installability (name, icons, start_url, standalone display)
+- Main layout container uses pt-[env(safe-area-inset-top)] and pl-[env(safe-area-inset-left)]
+- Right panel drawer content uses pr-[env(safe-area-inset-right)]
+- Right panel toggle button positioned with right-[env(safe-area-inset-right)]
+- Toolbar already had safe-area-inset-bottom from US-605
 
-## US-502: Create SliderInput component (DONE)
-- Created `ui/src/components/ui/slider-input.tsx`
-- Combines Radix Slider with ScrubInput for label+slider+input combo
-- Bidirectional sync between slider and input
-- onValueChange for live preview, onValueCommit for undo snapshots
-- Typecheck + lint passes
+## US-611: Add mobile-friendly inline text editing ✅
+- Created use-virtual-keyboard.ts hook using window.visualViewport API to detect keyboard height
+- Hidden textarea positioned at text layer screen coords on touch devices (iOS keyboard positioning)
+- When virtual keyboard opens, canvas auto-pans to keep edited text visible above keyboard
+- Pan restored when keyboard closes or editing ends (cleanup on unmount)
+- Floating mobile toolbar moves above keyboard via dynamic bottom offset with smooth transition
+- Text format toolbar clamped above keyboard when present
+- Added autoCapitalize="off" and autoCorrect="off" to hidden textarea
+- All existing desktop behavior unchanged, typecheck passes
 
-## US-504: Replace opacity control with SliderInput (DONE)
-- Replaced opacity Slider-only control with SliderInput combo
-- Removed old sliderDragRef/onSliderChange/onSliderCommit callbacks
-- Browser-tested: slider+input+label all display correctly
-- Commit: ba8d460
-
-## US-505: Add SliderInput for corner radius (DONE)
-- Replaced plain number input with SliderInput for corner radius
-- Max dynamically set to half the smaller dimension
-- Typecheck + lint passes
+## US-612: Add gesture hints and onboarding for mobile ✅
+- Created GestureHints component in components/canvas/gesture-hints.tsx
+- Shows dismissible overlay with 4 gesture hints: pinch-to-zoom, two-finger pan, tap-to-select, long-press
+- Each hint has animated SVG icon (pinch, pan, tap ripple, long-press arc)
+- Auto-shows on first mobile visit, auto-dismisses after 5 seconds
+- Tracked in localStorage ('vizpix-gestures-shown') so it only shows once
+- "Got it" button and tap-outside/X to dismiss manually
+- Added "Gestures" help button to mobile toolbar overflow menu to re-show hints
+- GestureHints rendered in EditorLayout for auto-show and in Toolbar for manual trigger
+- CSS keyframes added to index.css: pinch, panHand, tapRipple, longPress
+- Desktop unaffected (component returns null when isDesktop), typecheck passes
