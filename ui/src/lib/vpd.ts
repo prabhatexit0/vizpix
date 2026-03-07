@@ -215,7 +215,7 @@ function serializeLayer(l: Layer, files: Record<string, Uint8Array>): VpdLayerEn
         ...base,
       }
       if (l.runs.length > 1 || (l.runs.length === 1 && hasRunOverrides(l.runs[0]))) {
-        ;(entry as Record<string, unknown>).runs = l.runs
+        ;(entry as unknown as Record<string, unknown>).runs = l.runs
       }
       if (l.fontWeight !== 400) entry.fontWeight = l.fontWeight
       if (l.fontStyle !== 'normal') entry.fontStyle = l.fontStyle
@@ -352,7 +352,7 @@ async function deserializeLayer(
       const txtEntry = entry as VpdTextEntry
       const defaultFill = { type: 'solid' as const, color: '#ffffff' }
       const content = txtEntry.content
-      const runs = (txtEntry as Record<string, unknown>).runs as TextRun[] | undefined
+      const runs = (txtEntry as unknown as Record<string, unknown>).runs as TextRun[] | undefined
       return {
         ...base,
         type: 'text',

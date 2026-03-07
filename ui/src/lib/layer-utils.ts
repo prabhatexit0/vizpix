@@ -166,7 +166,7 @@ export function measureCursorPosition(
     const charsInSeg = Math.min(remaining, seg.text.length)
     ctx.font = seg.font
     if ('letterSpacing' in ctx) {
-      ;(ctx as CanvasRenderingContext2D).letterSpacing = `${seg.letterSpacing}px`
+      ;(ctx as unknown as CanvasRenderingContext2D).letterSpacing = `${seg.letterSpacing}px`
     }
     cursorW += ctx.measureText(seg.text.substring(0, charsInSeg)).width
     remaining -= charsInSeg
@@ -248,7 +248,7 @@ export function findCursorIndexFromLocal(
   for (const seg of line.segments) {
     ctx.font = seg.font
     if ('letterSpacing' in ctx) {
-      ;(ctx as CanvasRenderingContext2D).letterSpacing = `${seg.letterSpacing}px`
+      ;(ctx as unknown as CanvasRenderingContext2D).letterSpacing = `${seg.letterSpacing}px`
     }
     for (let i = 1; i <= seg.text.length; i++) {
       const w = ctx.measureText(seg.text.substring(0, i)).width
@@ -313,7 +313,7 @@ export function getSelectionRects(
     for (const seg of line.segments) {
       ctx.font = seg.font
       if ('letterSpacing' in ctx) {
-        ;(ctx as CanvasRenderingContext2D).letterSpacing = `${seg.letterSpacing}px`
+        ;(ctx as unknown as CanvasRenderingContext2D).letterSpacing = `${seg.letterSpacing}px`
       }
 
       const segEnd = seg.startOffset + seg.text.length

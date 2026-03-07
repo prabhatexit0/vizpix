@@ -242,7 +242,7 @@ export function getFormattingAtSelection(
       }
     }
     if (allSame) {
-      ;(result as Record<string, unknown>)[key] = firstVal
+      ;(result as unknown as Record<string, unknown>)[key] = firstVal
     } else {
       result.mixed = true
     }
