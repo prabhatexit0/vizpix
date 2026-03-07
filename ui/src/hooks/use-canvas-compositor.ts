@@ -53,6 +53,17 @@ export function useCanvasCompositor() {
       renderLayerToContext(ctx, layer, documentWidth, documentHeight)
     }
 
+    // Dim area outside document bounds to signal it won't be in the export.
+    // Draw a large rect with a cutout for the document using evenodd fill rule.
+    const pad = Math.max(w, h) / viewport.zoom + Math.max(documentWidth, documentHeight)
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(-pad, -pad, pad * 2, pad * 2)
+    ctx.rect(docX, docY, documentWidth, documentHeight)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'
+    ctx.fill('evenodd')
+    ctx.restore()
+
     ctx.restore()
   }, [])
 
