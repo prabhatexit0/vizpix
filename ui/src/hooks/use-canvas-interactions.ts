@@ -3,6 +3,7 @@ import { useEditorStore } from '@/store'
 import type { Layer, ToolMode } from '@/store/types'
 import { getAlphaCache } from '@/lib/hit-test-cache'
 import { getLayerDimensions, findLayerById } from '@/lib/layer-utils'
+import { snapLayer, type SnapGuide } from '@/lib/snap-utils'
 
 interface PointerState {
   down: boolean
@@ -267,6 +268,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
   const lastClickRef = useRef<{ time: number; layerId: string | null }>({ time: 0, layerId: null })
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const textDraggingRef = useRef(false)
+  const snapGuidesRef = useRef<SnapGuide[]>([])
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
 
   // Multi-touch tracking for pinch-to-zoom, two-finger pan, and rotation
@@ -542,7 +544,14 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
       if (tool === 'hand') {
         useEditorStore.getState().pan(dx, dy)
       } else if (tool === 'pointer') {
-        const { activeLayerId, layers, viewport, editingTextLayerId } = useEditorStore.getState()
+        const {
+          activeLayerId,
+          layers,
+          viewport,
+          editingTextLayerId,
+          documentWidth,
+          documentHeight,
+        } = useEditorStore.getState()
         if (!activeLayerId || editingTextLayerId) return
         const layer = findLayerById(layers, activeLayerId)
         if (!layer || layer.locked) return
@@ -552,10 +561,27 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
           ptr.movedLayer = true
         }
 
-        useEditorStore.getState().setTransform(activeLayerId, {
-          x: layer.transform.x + dx / viewport.zoom,
-          y: layer.transform.y + dy / viewport.zoom,
-        })
+        const proposedX = layer.transform.x + dx / viewport.zoom
+        const proposedY = layer.transform.y + dy / viewport.zoom
+
+        // Snap unless Alt is held
+        if (!e.altKey) {
+          const snapThreshold = 6 / viewport.zoom
+          const snap = snapLayer(
+            activeLayerId,
+            proposedX,
+            proposedY,
+            layers,
+            documentWidth,
+            documentHeight,
+            snapThreshold,
+          )
+          snapGuidesRef.current = snap.guides
+          useEditorStore.getState().setTransform(activeLayerId, { x: snap.x, y: snap.y })
+        } else {
+          snapGuidesRef.current = []
+          useEditorStore.getState().setTransform(activeLayerId, { x: proposedX, y: proposedY })
+        }
       } else if (isDrawTool(tool)) {
         const { wx, wy } = screenToWorld(e.clientX, e.clientY, canvas)
         drawPreviewRef.current = computeDrawRect(ptr.startWX, ptr.startWY, wx, wy, e.shiftKey)
@@ -631,6 +657,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
 
       ptrRef.current.down = false
       textDraggingRef.current = false
+      snapGuidesRef.current = []
     },
     [canvasRef, getEffectiveTool],
   )
@@ -659,6 +686,10 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
 
   const getDrawPreview = useCallback((): DrawPreview | null => {
     return drawPreviewRef.current
+  }, [])
+
+  const getSnapGuides = useCallback((): SnapGuide[] => {
+    return snapGuidesRef.current
   }, [])
 
   const [hoverCursor, setHoverCursor] = useState<string | null>(null)
@@ -702,6 +733,7 @@ export function useCanvasInteractions(canvasRef: React.RefObject<HTMLCanvasEleme
     onWheel,
     setTempHand,
     getDrawPreview,
+    getSnapGuides,
     hoverCursor,
     onHoverMove,
     contextMenu,

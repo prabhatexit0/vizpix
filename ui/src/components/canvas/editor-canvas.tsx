@@ -10,6 +10,7 @@ import { DrawPreviewOverlay } from './draw-preview-overlay'
 import { InlineTextEditor } from './inline-text-editor'
 import { SelectionOutline } from './selection-outline'
 import { TouchContextMenu } from './touch-context-menu'
+import { SnapGuidesOverlay } from './snap-guides-overlay'
 
 export function EditorCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -23,6 +24,7 @@ export function EditorCanvas() {
     onWheel,
     setTempHand,
     getDrawPreview,
+    getSnapGuides,
     hoverCursor,
     onHoverMove,
     contextMenu,
@@ -67,6 +69,8 @@ export function EditorCanvas() {
   const cycleCanvasBg = useEditorStore((s) => s.cycleCanvasBg)
   const setZoom = useEditorStore((s) => s.setZoom)
 
+  const [canvasRect, setCanvasRect] = useState<{ width: number; height: number } | null>(null)
+
   // Force re-render when fonts finish loading so text layers use the correct font
   const [, setFontsLoaded] = useState(false)
   useEffect(() => {
@@ -87,6 +91,7 @@ export function EditorCanvas() {
     canvas.height = newH
     canvas.style.width = `${width}px`
     canvas.style.height = `${height}px`
+    setCanvasRect({ width, height })
   }, [])
 
   // ResizeObserver — throttle to RAF to avoid multiple resizes per frame
@@ -154,6 +159,11 @@ export function EditorCanvas() {
       {activeLayerId && activeTool === 'pointer' && !editingTextLayerId && (
         <TransformHandles canvasRef={canvasRef} layerId={activeLayerId} viewport={viewport} />
       )}
+      <SnapGuidesOverlay
+        canvasRect={canvasRect}
+        viewport={viewport}
+        getSnapGuides={getSnapGuides}
+      />
       {activeLayerId && activeTool === 'crop' && (
         <CropOverlay canvasRef={canvasRef} layerId={activeLayerId} viewport={viewport} />
       )}
