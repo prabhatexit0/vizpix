@@ -1,117 +1,72 @@
 # Ralph Progress Log
-Started: Sat Mar  7 04:19:16 IST 2026
+Started: Tue Mar 10 11:01:32 AM UTC 2026
 ---
-## US-601: Add pinch-to-zoom gesture on canvas ✅
-- Added multi-touch pointer tracking via Map<pointerId, {x,y}> in use-canvas-interactions.ts
-- Two-finger pinch calculates distance change for zoom factor, midpoint for zoom center
-- Uses existing store.zoom(factor, centerX, centerY) method
-- Single-finger interactions unchanged, desktop unaffected
-- Canvas touch-action already 'none', respects ZOOM_MIN/ZOOM_MAX via store
 
-## US-602: Add two-finger pan gesture on canvas ✅
-- Added lastPinchMidRef to track midpoint between two touch pointers
-- On pointermove with two fingers, calculates midpoint delta and calls store.pan(dx, dy)
-- Pan and zoom happen simultaneously during pinch gestures
-- Single-finger still selects/moves layers, desktop behavior unchanged
-- Midpoint ref resets on pointer up when fewer than 2 fingers remain
+## FIX-01: Fix drawer width — cap at 280px on phones
+- Changed `drawer.tsx` right direction: added `max-w-[280px]` before `sm:max-w-sm`
+- On 390px phone: drawer=280px, canvas remaining=110px (PASS)
+- Tabs and panel content fit without clipping at 280px
+- Tablet/desktop unchanged (they don't use the drawer)
+- Commit: 73abe7c
 
-## US-603: Add two-finger rotation gesture for selected layer ✅
-- Added angle tracking (lastPinchAngleRef) and rotation gesture state refs
-- On pointerdown with 2 fingers: hit-tests both fingers against selected layer
-- If both fingers hit the layer, starts a 200ms hold timer before activating rotation
-- On pointermove: calculates angle delta via Math.atan2, applies to layer rotation
-- Snaps to 0/90/180/270 when within 5 degrees for precision
-- Quick pinch-zoom (>15% distance change) cancels rotation hold to prevent accidental rotation
-- Pushes undo snapshot on first rotation delta for reversibility
-- On empty canvas, two fingers pan/zoom as before (no rotation)
+## FIX-02: Fix drawer overlay blocking toolbar
+- Root cause: Vaul/Radix modal sets pointer-events:none on #root, blocking toolbar
+- Fix: Render mobile toolbar via Portal to body with explicit pointer-events:auto
+- Toolbar uses position:fixed + z-[60] (above overlay z-50)
+- Added noBodyStyles to Drawer + onOverlayClick for manual close handler
+- Toolbar clickable while drawer open (PASS)
+- Overlay click still closes drawer (PASS)
+- Overlay still darkens background (PASS)
+- Commit: e260b62
 
-## US-604: Responsive layout — collapsible right panel on mobile ✅
-- Changed mobile right panel from bottom drawer to right-side Vaul Drawer (direction="right")
-- Floating button on right edge opens/closes the drawer (PanelRight icon)
-- Drawer overlays the canvas, does not push it
-- Auto-opens when a layer is selected via Zustand store subscription
-- Auto-closes when layer is deselected (activeLayerId becomes null)
-- User can manually open/close; swipe right to dismiss (Vaul built-in)
-- Desktop layout unchanged (fixed sidebar with resize handle)
-- useResponsive() hook drives the layout switch at MOBILE_BREAKPOINT
+## FIX-03: Fix drawer auto-open during text editing
+- Added `editingTextLayerId` check in auto-open useEffect
+- Drawer stays closed when creating/editing text layer (PASS)
+- Drawer still auto-opens for non-text layers like rectangles (PASS)
+- Commit: c1982c5
 
-## US-605: Mobile toolbar — compact floating bar with essential tools only ✅
-- Mobile toolbar now shows 6 essential buttons: Pointer, Rectangle, Ellipse, Text, Undo, Redo
-- Added "..." overflow button using Radix Popover with a 4-column grid layout
-- Overflow contains: Hand, Zoom, Crop, Add Image, Save, Open, Canvas Size, Export
-- Each overflow item has icon + label for clarity
-- Overflow button highlights blue when open or when an overflow tool is active
-- All touch targets are min 44x44px
-- Toolbar positioned at bottom center with safe-area-inset-bottom padding
-- Desktop toolbar completely unchanged (vertical sidebar with all tools)
+## FIX-04: Fix landing page not scrollable in landscape
+- Changed CanvasSizePage container from `h-screen` to `fixed inset-0 overflow-y-auto py-8`
+- Body has global `position:fixed overflow:hidden`, so used fixed positioning to escape
+- Create Canvas button reachable by scrolling in landscape 844x390 (PASS)
+- Portrait layout unchanged
+- Commit: ca1333d
 
-## US-606: Touch-friendly layer selection and manipulation on canvas ✅
-- Added long-press (500ms) context menu for touch devices on layers
-- Context menu shows: Duplicate, Lock/Unlock, Edit (text only), Delete
-- Menu positioned near touch point, clamped to viewport bounds
-- Timer cancels on pointer move >10px or pointer up
-- Expanded hit test area by 8px on touch devices via hitTestLayerWithPadding
-- Tests surrounding points in 8 directions for expanded hit detection
-- Created TouchContextMenu component in components/canvas/touch-context-menu.tsx
-- Integrated into EditorCanvas with contextMenu/dismissContextMenu from hook
-- Existing tap-to-select, drag-to-move, double-tap-to-edit all work unchanged
+## FIX-05: Fix touch target sizes on mobile
+- Create Canvas button: 121x44px (PASS)
+- Width/Height inputs: 141x44px (PASS)
+- Color input: 44x44px (PASS)
+- Panel toggle button: 44x44px (PASS)
+- Confirm dialog buttons: h-11 on mobile
+- All conditional on isMobile via useResponsive()
+- Commit: b314cc1
 
-## US-607: Mobile-friendly dialogs — use Drawer for all modal content ✅
-- ShortcutsDialog now uses Vaul Drawer (bottom sheet) on mobile, Dialog on desktop
-- Extracted ShortcutsList component to share between both layouts
-- ConfirmDialog now uses Vaul Drawer on mobile with DrawerFooter for actions
-- ExportDialog already had Drawer pattern — verified working
-- CanvasSizeDialog already had Drawer pattern — verified working
-- All bottom drawers have visible drag handle via drawer.tsx component
-- All drawers dismissible by swiping down or tapping outside (Vaul built-in)
+## FIX-06: Fix zoom indicator overlapping with floating toolbar
+- Changed zoom indicator from `bottom-2` to `bottom-20` on non-desktop
+- Zoom indicator bottom (764px) is above toolbar top (770px) - no overlap (PASS)
+- Desktop unchanged (still bottom-2)
+- Commit: 14b08ae
 
-## US-608: Touch-optimized properties panel controls ✅
-- ScrubInput inputs: h-7 (28px) → h-11 (44px) on mobile via useResponsive()
-- SliderInput standalone inputs: h-7 → h-11 on mobile
-- Slider thumbs: size-3 (12px) → size-5 (20px) on mobile for easier grabbing
-- ColorPicker trigger swatch: h-8/w-8 → h-11/w-11 (44x44px) on mobile
-- All SelectTrigger dropdowns in properties panel: h-8 → h-11 on mobile
-- Button/control spacing: gap-2 → gap-3 on mobile in properties and adjust panels
-- All changes conditional via useResponsive() hook, desktop layout unchanged
+## FIX-07: Add aria-labels to mobile toolbar buttons
+- Added aria-label to all 7 main toolbar buttons + overflow menu items
+- Labels: Pointer, Rectangle, Ellipse, Text, Undo, Redo, More tools
+- Overflow items: Hand, Zoom, Crop, Add Image, Save, Open, Canvas Size, Export, Gestures
+- Commit: 62458ed
 
-## US-609: Add mobile breakpoint for tablet (768px) and refine layout ✅
-- Added PHONE_BREAKPOINT=768, renamed MOBILE_BREAKPOINT to TABLET_BREAKPOINT=1024
-- useResponsive() now returns { isMobile, isTablet, isDesktop } with stable snapshot caching
-- isMobile: < 768px (phone), isTablet: 768-1023px, isDesktop: >= 1024px
-- Toolbar: floating bottom bar on phone+tablet (!isDesktop), sidebar on desktop
-- Right panel: drawer on phone (isMobile), narrow sidebar (200px min, 320px max) on tablet, normal sidebar on desktop
-- Touch-optimized controls (larger targets, spacing): active on phone+tablet via !isDesktop
-- Dialogs: drawer on phone only (isMobile), regular dialog on tablet+desktop
-- Desktop layout completely unchanged — all pre-commit checks pass
+## FIX-08: Enlarge selection handle hit areas for touch
+- Hit area increased from 20px to 44px on non-desktop devices
+- Visual handle size remains 10px (unchanged)
+- Desktop hit area unchanged at 20px
+- Commit: 4085cc2
 
-## US-610: Add safe area insets and PWA meta tags for mobile ✅
-- Added viewport-fit=cover to viewport meta tag enabling safe area CSS env variables
-- Added apple-mobile-web-app-capable and apple-mobile-web-app-status-bar-style meta tags
-- Added theme-color meta tag (#0a0a0a) matching app background
-- Created manifest.json for PWA installability (name, icons, start_url, standalone display)
-- Main layout container uses pt-[env(safe-area-inset-top)] and pl-[env(safe-area-inset-left)]
-- Right panel drawer content uses pr-[env(safe-area-inset-right)]
-- Right panel toggle button positioned with right-[env(safe-area-inset-right)]
-- Toolbar already had safe-area-inset-bottom from US-605
+## FIX-09: Fix virtual keyboard auto-pan for text editing
+- Fixed sign error in pan call: pan(0, delta) → pan(0, -delta)
+- Canvas now pans upward to keep text visible above virtual keyboard
+- Pan restores when keyboard dismisses (existing logic unchanged)
+- Commit: e882f90
 
-## US-611: Add mobile-friendly inline text editing ✅
-- Created use-virtual-keyboard.ts hook using window.visualViewport API to detect keyboard height
-- Hidden textarea positioned at text layer screen coords on touch devices (iOS keyboard positioning)
-- When virtual keyboard opens, canvas auto-pans to keep edited text visible above keyboard
-- Pan restored when keyboard closes or editing ends (cleanup on unmount)
-- Floating mobile toolbar moves above keyboard via dynamic bottom offset with smooth transition
-- Text format toolbar clamped above keyboard when present
-- Added autoCapitalize="off" and autoCorrect="off" to hidden textarea
-- All existing desktop behavior unchanged, typecheck passes
-
-## US-612: Add gesture hints and onboarding for mobile ✅
-- Created GestureHints component in components/canvas/gesture-hints.tsx
-- Shows dismissible overlay with 4 gesture hints: pinch-to-zoom, two-finger pan, tap-to-select, long-press
-- Each hint has animated SVG icon (pinch, pan, tap ripple, long-press arc)
-- Auto-shows on first mobile visit, auto-dismisses after 5 seconds
-- Tracked in localStorage ('vizpix-gestures-shown') so it only shows once
-- "Got it" button and tap-outside/X to dismiss manually
-- Added "Gestures" help button to mobile toolbar overflow menu to re-show hints
-- GestureHints rendered in EditorLayout for auto-show and in Toolbar for manual trigger
-- CSS keyframes added to index.css: pinch, panHand, tapRipple, longPress
-- Desktop unaffected (component returns null when isDesktop), typecheck passes
+## FIX-10: Fix slider thumb size on mobile
+- Slider thumb enlarged from size-5 (20px) to size-7 (28px) on non-desktop
+- Desktop thumbs unchanged at size-3 (12px)
+- Verified with Playwright: all three sliders in Props panel measure 28x28px
+- Commit: cb62eb9
