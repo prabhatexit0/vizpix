@@ -46,6 +46,7 @@ export function ConfirmDialog({
           </DrawerHeader>
           <DrawerFooter>
             <Button
+              className="h-11"
               onClick={() => {
                 onOpenChange(false)
                 onConfirm()
@@ -53,7 +54,7 @@ export function ConfirmDialog({
             >
               {confirmLabel}
             </Button>
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            <Button variant="ghost" className="h-11" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
           </DrawerFooter>

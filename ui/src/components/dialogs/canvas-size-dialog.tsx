@@ -44,6 +44,7 @@ function CanvasSizeForm({
   onApply: (w: number, h: number, bg: string) => void
   onCancel?: () => void
 }) {
+  const { isMobile } = useResponsive()
   const docWidth = useEditorStore((s) => s.documentWidth)
   const docHeight = useEditorStore((s) => s.documentHeight)
   const docBg = useEditorStore((s) => s.documentBackground)
@@ -113,13 +114,14 @@ function CanvasSizeForm({
             max={MAX_CANVAS_SIZE}
             value={width}
             onChange={(e) => setWidth(clampSize(Number(e.target.value) || 1))}
+            className={isMobile ? 'h-11' : undefined}
           />
         </div>
 
         <Button
           variant="ghost"
           size="icon"
-          className="mb-0.5"
+          className={cn('mb-0.5', isMobile && 'size-11')}
           onClick={() => {
             setWidth(height)
             setHeight(width)
@@ -136,6 +138,7 @@ function CanvasSizeForm({
             max={MAX_CANVAS_SIZE}
             value={height}
             onChange={(e) => setHeight(clampSize(Number(e.target.value) || 1))}
+            className={isMobile ? 'h-11' : undefined}
           />
         </div>
       </div>
@@ -148,12 +151,15 @@ function CanvasSizeForm({
             type="color"
             value={background}
             onChange={(e) => setBackground(e.target.value)}
-            className="h-8 w-8 cursor-pointer rounded border border-white/8 bg-transparent"
+            className={cn(
+              'cursor-pointer rounded border border-white/8 bg-transparent',
+              isMobile ? 'h-11 w-11' : 'h-8 w-8',
+            )}
           />
           <Input
             value={background}
             onChange={(e) => setBackground(e.target.value)}
-            className="w-24 font-mono text-xs"
+            className={cn('w-24 font-mono text-xs', isMobile && 'h-11')}
           />
         </div>
       </div>
@@ -173,11 +179,14 @@ function CanvasSizeForm({
       {/* Actions */}
       <div className="flex justify-end gap-2">
         {onCancel && (
-          <Button variant="ghost" onClick={onCancel}>
+          <Button variant="ghost" className={isMobile ? 'h-11' : undefined} onClick={onCancel}>
             Cancel
           </Button>
         )}
-        <Button onClick={() => onApply(width, height, background)}>
+        <Button
+          className={isMobile ? 'h-11' : undefined}
+          onClick={() => onApply(width, height, background)}
+        >
           {onCancel ? 'Apply' : 'Create Canvas'}
         </Button>
       </div>

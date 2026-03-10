@@ -133,7 +133,7 @@ export function RightPanel() {
       <>
         <button
           onClick={() => setDrawerOpen(true)}
-          className="absolute top-4 right-[env(safe-area-inset-right)] z-50 rounded-l-lg border border-r-0 border-white/10 bg-neutral-900/90 p-2 text-neutral-400 backdrop-blur-md hover:text-white"
+          className="absolute top-4 right-[env(safe-area-inset-right)] z-50 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-l-lg border border-r-0 border-white/10 bg-neutral-900/90 text-neutral-400 backdrop-blur-md hover:text-white"
         >
           <PanelRight size={18} />
         </button>
