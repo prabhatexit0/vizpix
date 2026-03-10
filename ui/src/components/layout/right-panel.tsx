@@ -118,6 +118,7 @@ export function RightPanel() {
     return useEditorStore.subscribe((state) => {
       if (state.activeLayerId !== prevId) {
         prevId = state.activeLayerId
+        if (state.editingTextLayerId) return
         setDrawerOpen(state.activeLayerId !== null)
       }
     })
