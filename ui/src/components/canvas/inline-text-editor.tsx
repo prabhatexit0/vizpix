@@ -77,7 +77,7 @@ export function InlineTextEditor({ canvasRef, layerId, viewport }: InlineTextEdi
           savedPanYRef.current = viewport.panY
         }
         const delta = textScreenY - visibleBottom
-        useEditorStore.getState().pan(0, delta)
+        useEditorStore.getState().pan(0, -delta)
       }
     } else if (savedPanYRef.current !== null) {
       // Keyboard closed — restore original pan
