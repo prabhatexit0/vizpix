@@ -136,8 +136,8 @@ export function RightPanel() {
         >
           <PanelRight size={18} />
         </button>
-        <Drawer direction="right" open={drawerOpen} onOpenChange={handleDrawerChange}>
-          <DrawerContent className="h-full">
+        <Drawer direction="right" noBodyStyles open={drawerOpen} onOpenChange={handleDrawerChange}>
+          <DrawerContent className="h-full" onOverlayClick={() => setDrawerOpen(false)}>
             <div className="flex h-full flex-col pr-[env(safe-area-inset-right)]">
               <PanelTabs />
             </div>

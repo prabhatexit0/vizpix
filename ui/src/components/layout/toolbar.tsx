@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   MousePointer2,
   Hand,
@@ -307,11 +308,11 @@ export function Toolbar() {
   )
 
   if (!isDesktop) {
-    return (
+    return createPortal(
       <>
         <div
-          className="absolute left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/15 bg-neutral-900/90 px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md transition-[bottom] duration-200"
-          style={{ bottom: keyboardHeight > 0 ? keyboardHeight + 8 : 16 }}
+          className="fixed left-1/2 z-[60] flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/15 bg-neutral-900/90 px-2 py-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-md transition-[bottom] duration-200"
+          style={{ bottom: keyboardHeight > 0 ? keyboardHeight + 8 : 16, pointerEvents: 'auto' }}
         >
           <button
             onClick={() => setActiveTool('pointer')}
@@ -415,7 +416,8 @@ export function Toolbar() {
           </PopoverPrimitive.Root>
         </div>
         {dialogs}
-      </>
+      </>,
+      document.body,
     )
   }
 
