@@ -1,5 +1,6 @@
 import { useMemo, useCallback, useRef, useEffect, useState } from 'react'
 import { useEditorStore } from '@/store'
+import { useResponsive } from '@/hooks/use-responsive'
 import type { Viewport } from '@/store/types'
 import { findLayerById, getLayerDimensions } from '@/lib/layer-utils'
 
@@ -52,6 +53,8 @@ interface DragState {
 }
 
 export function TransformHandles({ canvasRef, layerId, viewport }: TransformHandlesProps) {
+  const { isDesktop } = useResponsive()
+  const hitArea = isDesktop ? HIT_AREA : 44
   const layer = useEditorStore((s) => findLayerById(s.layers, layerId))
   const dragRef = useRef<DragState | null>(null)
   const lastPointerDownRef = useRef(0)
@@ -284,7 +287,7 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
   })
 
   const half = HANDLE_SIZE / 2
-  const hitPad = (HIT_AREA - HANDLE_SIZE) / 2
+  const hitPad = (hitArea - HANDLE_SIZE) / 2
 
   const isActive = (type: 'corner' | 'mid', index: number) =>
     draggingHandle?.type === type && draggingHandle.index === index
@@ -319,8 +322,8 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
           <rect
             x={c.x - half - hitPad}
             y={c.y - half - hitPad}
-            width={HIT_AREA}
-            height={HIT_AREA}
+            width={hitArea}
+            height={hitArea}
             fill="transparent"
           />
           <rect
@@ -347,8 +350,8 @@ export function TransformHandles({ canvasRef, layerId, viewport }: TransformHand
           <rect
             x={m.x - half - hitPad}
             y={m.y - half - hitPad}
-            width={HIT_AREA}
-            height={HIT_AREA}
+            width={hitArea}
+            height={hitArea}
             fill="transparent"
           />
           <rect
