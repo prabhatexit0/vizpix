@@ -315,24 +315,28 @@ export function Toolbar() {
           style={{ bottom: keyboardHeight > 0 ? keyboardHeight + 8 : 16, pointerEvents: 'auto' }}
         >
           <button
+            aria-label="Pointer"
             onClick={() => setActiveTool('pointer')}
             className={toolBtnClass(activeTool === 'pointer', true)}
           >
             <MousePointer2 size={iconSize} />
           </button>
           <button
+            aria-label="Rectangle"
             onClick={() => setActiveTool('draw-rectangle')}
             className={toolBtnClass(activeTool === 'draw-rectangle', true)}
           >
             <Square size={iconSize} />
           </button>
           <button
+            aria-label="Ellipse"
             onClick={() => setActiveTool('draw-ellipse')}
             className={toolBtnClass(activeTool === 'draw-ellipse', true)}
           >
             <Circle size={iconSize} />
           </button>
           <button
+            aria-label="Text"
             onClick={() => setActiveTool('draw-text')}
             className={toolBtnClass(activeTool === 'draw-text', true)}
           >
@@ -342,6 +346,7 @@ export function Toolbar() {
           <div className="h-5 w-px bg-white/15" />
 
           <button
+            aria-label="Undo"
             onClick={() => undo()}
             disabled={undoStack.length === 0}
             className={cn(actionBtnClass(true), 'disabled:pointer-events-none disabled:opacity-25')}
@@ -349,6 +354,7 @@ export function Toolbar() {
             <Undo2 size={iconSize} />
           </button>
           <button
+            aria-label="Redo"
             onClick={() => redo()}
             disabled={redoStack.length === 0}
             className={cn(actionBtnClass(true), 'disabled:pointer-events-none disabled:opacity-25')}
@@ -361,6 +367,7 @@ export function Toolbar() {
           <PopoverPrimitive.Root open={overflowOpen} onOpenChange={setOverflowOpen}>
             <PopoverPrimitive.Trigger asChild>
               <button
+                aria-label="More tools"
                 className={cn(
                   'flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2.5 transition-colors',
                   hasOverflowToolActive || overflowOpen
@@ -381,6 +388,7 @@ export function Toolbar() {
                   {OVERFLOW_TOOLS.map(({ mode, icon: Icon, label }) => (
                     <button
                       key={mode}
+                      aria-label={label}
                       onClick={() => {
                         setActiveTool(mode)
                         setOverflowOpen(false)
@@ -399,6 +407,7 @@ export function Toolbar() {
                   {OVERFLOW_ACTIONS.map(({ icon: Icon, label, action }) => (
                     <button
                       key={label}
+                      aria-label={label}
                       onClick={() => {
                         action()
                         setOverflowOpen(false)
