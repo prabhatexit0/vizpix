@@ -188,7 +188,7 @@ function CanvasSizeForm({
 /** Full-page canvas size picker shown on app launch */
 export function CanvasSizePage({ onApply, onOpenProject }: CanvasSizePageProps) {
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-neutral-950 text-white">
+    <div className="fixed inset-0 flex items-center justify-center overflow-y-auto bg-neutral-950 py-8 text-white">
       <div className="w-full max-w-md px-6">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-semibold">New Canvas</h1>
