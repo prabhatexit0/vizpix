@@ -1,0 +1,244 @@
+{
+  "project": "VizPix",
+  "branchName": "ralph/text-ux-overhaul",
+  "description": "Fix critical text layer bugs and overhaul UX for text editing, layer selection, and property editing workflow. The current text implementation has broken hit-testing, invisible empty layers, and the split Layers/Properties panel forces constant tab-switching.",
+  "userStories": [
+    {
+      "id": "US-101",
+      "title": "Fix empty text layers having zero-size hit area",
+      "description": "As a user, I want to click on text layers I just created (even when empty) to select them on the canvas.",
+      "acceptanceCriteria": [
+        "In use-canvas-interactions.ts hitTestLayer for text type, enforce a minimum hit area of 100x30 pixels (in local space) so empty text layers are clickable",
+        "In layer-utils.ts measureTextLayer, return a minimum width of 100 and minimum height equal to fontSize*lineHeight when content is empty",
+        "Clicking anywhere in the minimum bounding area selects the empty text layer",
+        "Non-empty text layers continue to use their measured dimensions (no change to existing behavior)",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "This is the #1 text bug. measureTextLayer returns {width:0, height:0} for empty content, making empty text layers impossible to click. The fix is in two places: measureTextLayer should return minimum dims, and hitTestLayer should use those dims."
+    },
+    {
+      "id": "US-102",
+      "title": "Render placeholder for empty text layers on canvas",
+      "description": "As a user, I want to see where my empty text layers are on the canvas so I can find and click them.",
+      "acceptanceCriteria": [
+        "In layer-render.ts renderTextLayer, when content is empty, render a faint placeholder: a dashed border rectangle at 50% opacity matching the fill color",
+        "Placeholder rectangle uses the minimum dimensions from measureTextLayer (100 x fontSize*lineHeight)",
+        "Placeholder disappears as soon as user types any character",
+        "The placeholder does NOT appear in exports (only in canvas compositor rendering)",
+        "Add an optional `isExport` parameter to renderLayerToContext to suppress placeholders during export",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Currently empty text layers are completely invisible. Users create a text layer and can't find it. A subtle dashed outline makes them visible without being distracting."
+    },
+    {
+      "id": "US-103",
+      "title": "Auto-switch to Properties tab on layer selection",
+      "description": "As a user, I want the right panel to automatically show me the properties of the layer I just selected, without manually switching tabs.",
+      "acceptanceCriteria": [
+        "When activeLayerId changes from null to a valid ID (layer selected), automatically set activePanel to 'properties'",
+        "When activeLayerId changes from one layer to another, stay on properties if already on properties, otherwise don't switch (don't force switch if user is on adjust tab)",
+        "When activeLayerId becomes null (deselect), switch back to 'layers' tab",
+        "Implement this as a Zustand subscribe effect in editor-store.ts or as a useEffect in right-panel.tsx",
+        "Manual tab switching still works and is not overridden while a layer remains selected",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "This is the main UX pain point the user described: having to jump between Layers and Props tabs. The auto-switch should feel natural - switch to Props when selecting, back to Layers when deselecting."
+    },
+    {
+      "id": "US-104",
+      "title": "Show inline layer properties in Layers panel",
+      "description": "As a user, I want to see key properties of the selected layer right in the Layers panel without switching tabs.",
+      "acceptanceCriteria": [
+        "In layer-item.tsx, when a layer is active (isActive), show a compact expandable section below the opacity slider",
+        "For text layers: show font family, font size, and text color as a single row of compact inputs",
+        "For shape layers: show fill color swatch and stroke width as a single row",
+        "For image layers: show dimensions as read-only text",
+        "These inline controls update the store via updateTextProperties/updateShapeProperties directly",
+        "Push snapshot on focus for inline property inputs (consistent with properties panel)",
+        "Keep it compact - max 1-2 rows of controls, not a full properties panel clone",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "This complements US-103. Even with auto-switch, having the most commonly edited properties right in the layers panel saves clicks. Keep it minimal - just the properties you'd want to tweak quickly."
+    },
+    {
+      "id": "US-105",
+      "title": "Add edit button and double-click to enter text editing from Layers panel",
+      "description": "As a user, I want to start editing text content without having to double-click precisely on the canvas.",
+      "acceptanceCriteria": [
+        "In layer-item.tsx, for text layers, add a small pencil/edit icon button in the hover actions row (next to lock/visibility/delete)",
+        "Clicking the edit button sets editingTextLayerId to this layer's ID and switches activeTool to 'pointer'",
+        "Double-clicking a text layer item in the layers panel also enters text editing mode (in addition to the existing double-click-to-rename behavior: double-click on the name renames, double-click on the thumbnail/icon area edits text)",
+        "When entering edit mode from layers panel, auto-switch activePanel to 'layers' so the canvas is visible",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Currently the only way to enter inline text editing is double-clicking on canvas. If the text is small/empty, this is impossible. The layers panel edit button gives reliable access."
+    },
+    {
+      "id": "US-106",
+      "title": "Fix Properties panel text content textarea undo integration",
+      "description": "As a user, I want editing text content in the Properties panel to create proper undo entries.",
+      "acceptanceCriteria": [
+        "In properties-panel.tsx, the text content textarea pushes a snapshot on focus (like other inputs)",
+        "Rapid typing in the textarea does NOT create multiple undo entries - one snapshot per focus-blur cycle",
+        "Undoing after editing text content in Properties panel reverts the full text change",
+        "If editingTextLayerId is set (inline editing active), disable the Properties panel textarea to prevent conflicts, show a note 'Editing on canvas...'",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "The textarea at properties-panel.tsx:448-453 has no onFocus snapshot push, creating inconsistent undo behavior. Also, both the inline editor and the Properties textarea can try to edit the same content simultaneously."
+    },
+    {
+      "id": "US-107",
+      "title": "Improve text layer single-click selection on canvas",
+      "description": "As a user, I want single-clicking a text layer on canvas to reliably select it, even for small or rotated text.",
+      "acceptanceCriteria": [
+        "Text hit-test in use-canvas-interactions.ts adds padding of 8px (in local coords) around the measured text bounds for easier clicking",
+        "For text layers with boxWidth set, use boxWidth as the hit-test width (not measured content width) so the full textbox area is clickable",
+        "Hit-test works correctly for rotated text layers (verify the coordinate transform math is consistent with image/shape layers)",
+        "After single-click selection, the layer gets a selection outline AND the Properties panel shows its props (via US-103)",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Even non-empty text is hard to click because the hit area exactly matches the measured text with no padding. Adding padding makes it much easier. Also, boxWidth text boxes should be clickable across their full box width."
+    },
+    {
+      "id": "US-108",
+      "title": "Enter text editing on Enter key when text layer is selected",
+      "description": "As a user, I want to press Enter to start editing the selected text layer, like in Figma.",
+      "acceptanceCriteria": [
+        "In use-keyboard-shortcuts.ts, when Enter is pressed and the active layer is a text type layer, set editingTextLayerId to activeLayerId",
+        "Only activate when not already editing text, and when no input/textarea/select is focused",
+        "Pressing Escape exits text editing (already works)",
+        "Pressing Enter while inline-editing text inserts a newline as usual (don't intercept Enter during editing)",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "This is a standard design tool convention. Enter = edit selected text, Escape = stop editing. The keyboard handler already checks for INPUT/TEXTAREA/SELECT tags."
+    },
+    {
+      "id": "US-109",
+      "title": "Fix InlineTextEditor blur/refocus fighting with canvas interactions",
+      "description": "As a user, I want text editing to not flicker or lose focus when I click inside the text on canvas.",
+      "acceptanceCriteria": [
+        "In inline-text-editor.tsx, replace the requestAnimationFrame refocus hack with a more robust approach: check if the relatedTarget of the blur event is within the canvas container before refocusing",
+        "If blur is caused by clicking on canvas (pointer capture), refocus the textarea after a microtask (queueMicrotask) not rAF",
+        "If blur is caused by clicking on a UI element outside the canvas (e.g., panel button), commit the text edit instead of refocusing",
+        "Clicking on transform handles while editing text does NOT steal focus (handles should not cause blur)",
+        "No visible flickering of the caret when clicking within the text to reposition cursor",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "The current onBlur handler at inline-text-editor.tsx:91-98 uses rAF which races with pointer capture. This causes the textarea to sometimes lose focus permanently, or flicker the caret."
+    },
+    {
+      "id": "US-110",
+      "title": "Update layer thumbnails reactively when properties change",
+      "description": "As a user, I want layer thumbnails in the Layers panel to reflect the current state of the layer.",
+      "acceptanceCriteria": [
+        "In layer-item.tsx, the canvas ref callback for shape/text thumbnail rendering should re-run when layer properties change",
+        "Use a useEffect + useRef<HTMLCanvasElement> pattern instead of the inline ref callback to properly react to layer changes",
+        "When a text layer's content, font, or fill changes, the thumbnail updates",
+        "When a shape layer's fill, stroke, or corner radius changes, the thumbnail updates",
+        "Throttle thumbnail re-renders to max once per 200ms to avoid performance issues during rapid editing",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "The current ref callback at layer-item.tsx:112-128 only runs on mount. Changing text content or shape fill doesn't update the thumbnail, making the layers panel stale and confusing."
+    },
+    {
+      "id": "US-111",
+      "title": "Add text fill color picker to Properties panel for all fill types",
+      "description": "As a user, I want to change text color regardless of fill type, and I want a fill type selector for text layers like shapes have.",
+      "acceptanceCriteria": [
+        "In properties-panel.tsx text section, add a Fill Type selector (None/Solid/Linear Gradient/Radial Gradient) matching the existing shape fill type selector",
+        "Use the same fill-type-switching logic from shapes (preserveColor pattern from US-023) for text layers",
+        "Show the appropriate color controls based on fill type (color picker for solid, gradient stops for gradients)",
+        "When fill type is 'none', text renders invisible but layer is still selectable",
+        "Call updateTextProperties for all fill changes (route through store, not directly)",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "Currently the Properties panel only shows a color picker when fill.type === 'solid' for text. There's no way to change text fill type or use gradients, even though the type system and renderer support it."
+    },
+    {
+      "id": "US-112",
+      "title": "Commit text editing when switching tools or selecting another layer",
+      "description": "As a user, I want text editing to gracefully end when I do something else, not leave orphaned editing state.",
+      "acceptanceCriteria": [
+        "In tools-slice.ts setActiveTool, clear editingTextLayerId when switching away from pointer tool (already done, verify)",
+        "In layers-slice.ts setActiveLayer, if the new activeLayerId is different from editingTextLayerId, clear editingTextLayerId",
+        "When editingTextLayerId is cleared, if the text content is empty, delete the text layer (same as Escape behavior)",
+        "Switching tools via keyboard shortcuts (V, H, Z, C, R, E) while editing text should commit and exit editing mode",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "Currently setActiveTool clears editingTextLayerId, but setActiveLayer does not. This means clicking a different layer while editing text leaves the InlineTextEditor mounted for the old layer. Also, empty text cleanup only happens on Escape, not on implicit commit."
+    },
+    {
+      "id": "US-113",
+      "title": "Add cursor style feedback for text layers on canvas",
+      "description": "As a user, I want the cursor to change when hovering over text layers to indicate they are clickable and editable.",
+      "acceptanceCriteria": [
+        "When the pointer tool is active and cursor hovers over a text layer, change cursor to 'text' (I-beam)",
+        "When hovering over a non-text layer, keep cursor as 'default'",
+        "When editingTextLayerId is set and cursor is over the editing text layer, show 'text' cursor",
+        "Implement by running hitTestLayers on pointer move (only when pointer is not down) and setting cursor via canvas style",
+        "Throttle hit-test on hover to max once per 50ms to avoid performance issues",
+        "When no layer is under cursor, revert to tool-default cursor",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "Currently the cursor is always 'default' in pointer mode regardless of what's under it. An I-beam cursor on text layers signals 'this is editable text' and is standard in all design tools."
+    },
+    {
+      "id": "US-114",
+      "title": "Fix clipboard paste for text layers losing text-specific properties",
+      "description": "As a user, I want copy-pasting a text layer to preserve all text properties, not just the base layer fields.",
+      "acceptanceCriteria": [
+        "In use-keyboard-shortcuts.ts Ctrl+V handler, use the existing deepCloneLayer function from layers-slice instead of a shallow spread",
+        "Export deepCloneLayer from layers-slice.ts (or move to layer-utils.ts) so it can be imported by the keyboard shortcuts hook",
+        "Pasted text layers preserve: fontFamily, fontSize, fontWeight, fontStyle, fill (including gradients), textAlign, lineHeight, letterSpacing, boxWidth, boxHeight",
+        "Pasted shape layers preserve: fill (including gradient stops), stroke, cornerRadius, points",
+        "Pasted group layers deep-clone all children",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "The Ctrl+V handler at use-keyboard-shortcuts.ts:116-126 does a shallow spread {...src} which shares fill/gradient/points references. Changing the paste's gradient would mutate the original. Use deepCloneLayer from layers-slice.ts."
+    },
+    {
+      "id": "US-115",
+      "title": "Add font family dropdown with common web fonts",
+      "description": "As a user, I want to pick from common fonts in a dropdown instead of typing font family names from memory.",
+      "acceptanceCriteria": [
+        "In properties-panel.tsx, replace the font family text Input with a Select dropdown",
+        "Include these fonts: Inter, Arial, Helvetica, Georgia, Times New Roman, Courier New, Verdana, Trebuchet MS, Impact, Comic Sans MS, monospace, serif, sans-serif",
+        "Each font option renders in its own font family for preview (style the SelectItem with the font)",
+        "Keep a text input below the dropdown labeled 'Custom' for entering arbitrary font names",
+        "When user types in the custom input and presses Enter or blurs, apply that font family",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "Currently font family is a bare text input. Users have to know exact font names. A dropdown with previews is standard in design tools and massively improves discoverability."
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+# Ralph Progress Log
+Started: Sat Mar  7 04:00:53 IST 2026
+---
+
+## US-501: Create ScrubInput component (DONE)
+- Created `ui/src/components/ui/scrub-input.tsx`
+- Compound label+input with drag-on-label scrubbing via pointer capture
+- Shift=10x, Alt=0.1x sensitivity modifiers
+- Arrow Up/Down stepping, Enter commit, Escape revert
+- Select-all on focus, configurable min/max/step/precision/suffix
+- Typecheck + lint passes
+
+## US-503: Replace transform inputs with ScrubInput (DONE)
+- Replaced X, Y, Scale X, Scale Y, Rotation in properties-panel.tsx with ScrubInput
+- Labels are scrubbable via drag, undo snapshot pushed once at scrub start
+- Browser-tested: all inputs render correctly with proper values
+- Typecheck + lint passes
+
+## US-512: Add rotation dial (DONE)
+- Created `ui/src/components/ui/rotation-dial.tsx` — 32x32 SVG circular control
+- Dot indicates current angle, drag to rotate, Shift snaps to 15deg
+- Integrated next to rotation ScrubInput in properties panel
+- Browser-tested: dial renders correctly
+- Typecheck + lint passes
+
+## US-511: Improve adjust panel sliders (DONE)
+- Replaced all Slider with SliderInput in adjust-panel.tsx
+- Labels are scrubbable, values are editable
+- Double-click any slider area to reset to default
+- Removed unused format property from SliderDef
+- Typecheck + lint passes
+
+## US-510: Add dimension inputs with constrain toggle (DONE)
+- Replaced read-only W/H with ScrubInput showing actual pixel dimensions
+- Added link/unlink toggle between W and H for proportional constraint
+- Constraint state per-session (useState), not per-layer
+- Removed unused clampedUpdate helper
+- Typecheck + lint passes
+
+## US-509: Input focus management (DONE)
+- Select-all-on-focus: ScrubInput uses select() in rAF, SliderInput uses e.target.select()
+- Tab/Shift+Tab: native browser behavior between input elements
+- Double-click on input: only selects text, scrubbing is only on labels
+- No additional code changes needed — requirements met by existing ScrubInput/SliderInput
+
+## US-508: Improve color picker (DONE)
+- Created `ui/src/components/ui/color-picker.tsx` with HSV popover
+- SV plane, hue slider, hex input, 10 preset swatches
+- Replaced native <input type=color> in shape fill, stroke color, text color
+- Browser-tested: swatches render correctly
+- Typecheck + lint passes
+
+## US-507: Add SliderInput for stroke width (DONE)
+- Replaced stroke width plain input with SliderInput (0-50px, step 0.5)
+- Separated stroke color to its own row
+- Typecheck + lint passes
+
+## US-506: Add ScrubInput for text properties (DONE)
+- Replaced font size, line height, letter spacing with ScrubInput
+- Selection-aware font size uses updateTextProp
+- Typecheck + lint passes
+
+## US-502: Create SliderInput component (DONE)
+- Created `ui/src/components/ui/slider-input.tsx`
+- Combines Radix Slider with ScrubInput for label+slider+input combo
+- Bidirectional sync between slider and input
+- onValueChange for live preview, onValueCommit for undo snapshots
+- Typecheck + lint passes
+
+## US-504: Replace opacity control with SliderInput (DONE)
+- Replaced opacity Slider-only control with SliderInput combo
+- Removed old sliderDragRef/onSliderChange/onSliderCommit callbacks
+- Browser-tested: slider+input+label all display correctly
+- Commit: ba8d460
+
+## US-505: Add SliderInput for corner radius (DONE)
+- Replaced plain number input with SliderInput for corner radius
+- Max dynamically set to half the smaller dimension
+- Typecheck + lint passes

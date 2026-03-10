@@ -1,0 +1,4 @@
+# Ralph Progress Log
+Started: Sat Mar  7 2026 (ux-visual-polish run)
+Browser-verified fixes. Each story validated via Playwright screenshots.
+---

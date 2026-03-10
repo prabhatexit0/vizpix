@@ -1,0 +1,228 @@
+{
+  "project": "VizPix",
+  "branchName": "ralph/rich-text",
+  "description": "Rich text support — per-character/per-range formatting like Figma. Text layers gain a runs-based data model where each run can have its own font, size, weight, style, color, and decoration. The inline editor supports selection-aware formatting.",
+  "userStories": [
+    {
+      "id": "US-401",
+      "title": "Add TextRun type and migrate TextLayer data model",
+      "description": "As a developer, I want the TextLayer data model to support per-range formatting via a runs array, while keeping backward compatibility with the existing content string.",
+      "acceptanceCriteria": [
+        "Add TextRun interface to types.ts: { text: string, fontFamily?: string, fontSize?: number, fontWeight?: FontWeight, fontStyle?: 'normal'|'italic', fill?: Fill, letterSpacing?: number, textDecoration?: 'none'|'underline'|'strikethrough' }",
+        "Add 'runs: TextRun[]' field to TextLayer interface",
+        "Keep 'content' as a computed getter or derived field — content = runs.map(r => r.text).join('')",
+        "Update addTextLayer() in layers-slice.ts to create layers with runs: [{ text: '' }] (single empty run with no overrides = inherits layer defaults)",
+        "Add helper functions: getPlainText(runs) -> string, runsFromPlainText(text) -> TextRun[], splitRunsAtIndex(runs, index) -> [TextRun[], TextRun[]]",
+        "Add a migration helper: if a loaded layer has 'content' but no 'runs', auto-convert to runs: [{ text: content }]",
+        "Update updateTextProperties() — when 'content' is updated, sync to runs: [{ text: newContent }] (single-run update for backward compat)",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "This is the foundation. Keep backward compat so existing text layers still work. The 'content' field should be derived from runs for any code that reads it. Key files: types.ts, layers-slice.ts. Add a new lib/rich-text-utils.ts for run manipulation helpers."
+    },
+    {
+      "id": "US-402",
+      "title": "Run-aware text rendering on canvas",
+      "description": "As a user, I want text with mixed formatting (different sizes, colors, weights within the same layer) to render correctly on the canvas.",
+      "acceptanceCriteria": [
+        "renderTextLayer() in layer-render.ts uses layer.runs instead of flat content/font props",
+        "Each run renders with its own resolved formatting: run.fontSize ?? layer.fontSize, run.fontFamily ?? layer.fontFamily, etc.",
+        "Single-run text (the common case) looks identical to current rendering",
+        "Multi-run text on the same line renders runs left-to-right with correct horizontal offsets",
+        "Multi-run text across lines respects line breaks (\\n in run text)",
+        "Gradient fills still work (composite approach uses per-run font settings)",
+        "Empty runs (text: '') are skipped during rendering",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "The hardest part is horizontal positioning. For each line, iterate through the runs that fall on that line, measuring each run's contribution to the line width. Then render each run at the correct x offset. The line height for a mixed-size line should be max(fontSize * lineHeight) across all runs on that line. Start with same-size runs rendering correctly, then handle mixed sizes."
+    },
+    {
+      "id": "US-403",
+      "title": "Run-aware text measurement and line wrapping",
+      "description": "As a developer, I want measureTextLayer, wrapText, and splitLinesWithOffsets to work with runs for correct hit testing and cursor positioning.",
+      "acceptanceCriteria": [
+        "measureTextLayer() computes dimensions by iterating through runs, not using a single font",
+        "wrapText is replaced by a run-aware wrapRuns() that produces lines where each line is an array of RunSegments: { run: TextRun, text: string, startOffset: number, width: number }",
+        "Line height per line is max(resolvedFontSize * lineHeight) across runs on that line",
+        "splitLinesWithOffsets() is updated to work with runs, tracking which run and character offset each position maps to",
+        "getLayerDimensions() still returns correct width/height for text layers",
+        "Hit test bounding box in use-canvas-interactions.ts still works",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "This is the trickiest story. The line-wrapping algorithm needs to track run boundaries while wrapping. A run can span multiple lines (its text gets split across lines at word boundaries). Each line becomes a list of segments, where each segment references its parent run. Create a new type: type TextLine = { segments: RunSegment[], lineHeight: number, width: number, yOffset: number }. Build a layoutTextRuns(layer) function that returns TextLine[]."
+    },
+    {
+      "id": "US-404",
+      "title": "Run-aware cursor positioning and click-to-cursor",
+      "description": "As a user, I want to click anywhere in mixed-formatted text and have the cursor appear at the correct character position.",
+      "acceptanceCriteria": [
+        "measureCursorPosition() works with runs — given a flat char index, finds the correct run, measures with that run's font, returns correct local coords",
+        "findCursorIndexFromLocal() works with runs — given local coords, finds the correct character index across all runs",
+        "Cursor caret height matches the fontSize of the run at the cursor position (taller caret for larger text)",
+        "Clicking between runs places cursor at the correct boundary",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Both functions need to use the TextLine layout from US-403. measureCursorPosition: walk through lines and segments until flat index is found, measure width in that segment's font. findCursorIndexFromLocal: find the line by Y, then walk segments by X, measuring in each segment's font."
+    },
+    {
+      "id": "US-405",
+      "title": "Selection-aware formatting: split and apply to runs",
+      "description": "As a user, I want to select a range of text and apply formatting (bold, italic, color, size) to just the selected range.",
+      "acceptanceCriteria": [
+        "Add applyFormattingToSelection(runs, selStart, selEnd, props: Partial<TextRun>) -> TextRun[] in rich-text-utils.ts",
+        "Splits runs at selection boundaries if needed (a run partially selected becomes 2-3 runs)",
+        "Merges adjacent runs with identical formatting after changes",
+        "Add removeFormattingFromSelection(runs, selStart, selEnd, keys: string[]) -> TextRun[] to remove overrides",
+        "Add getFormattingAtSelection(runs, selStart, selEnd) -> { mixed: boolean, ...props } that returns the common formatting of the selection (or 'mixed' if runs differ)",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Core algorithm: 1) Find all runs that overlap [selStart, selEnd]. 2) For each overlapping run, if partially overlapping, split it at the boundary. 3) Apply the formatting override to the fully-selected runs. 4) Merge adjacent runs with same formatting. This is pure data manipulation — no UI yet."
+    },
+    {
+      "id": "US-406",
+      "title": "Store: track text selection range and formatting commands",
+      "description": "As a developer, I want the store to track the current text selection range and provide actions to apply formatting to it.",
+      "acceptanceCriteria": [
+        "Add textSelection: { start: number, end: number } | null to ToolsSlice (alongside editingTextLayerId)",
+        "Add setTextSelection(sel: { start: number, end: number } | null) action",
+        "Add applyTextFormatting(layerId: string, props: Partial<TextRun>) action that calls applyFormattingToSelection on the layer's runs using the current selection",
+        "InlineTextEditor syncs textarea.selectionStart/End to store's textSelection on every selection change",
+        "Pressing Escape or committing text clears textSelection",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "The inline-text-editor already tracks cursorIndex and selectionEnd in local state. We need to lift this to the store so the properties panel can read it. Keep the local state for immediate responsiveness, but sync to store on changes (debounce not needed — selection changes are fast)."
+    },
+    {
+      "id": "US-407",
+      "title": "Properties panel: selection-aware formatting controls",
+      "description": "As a user, I want the properties panel to show and edit the formatting of my current text selection, not the entire layer.",
+      "acceptanceCriteria": [
+        "When editing text with a selection, Props panel shows formatting of the selected range",
+        "If selection has mixed values (e.g., some text is bold, some isn't), show a 'Mixed' indicator or placeholder",
+        "Changing font size in Props applies to selection only (via applyTextFormatting)",
+        "Changing font family in Props applies to selection only",
+        "Changing font weight in Props applies to selection only",
+        "Changing font style (italic) in Props applies to selection only",
+        "Changing color in Props applies to selection only",
+        "When no text is selected (cursor only, no range), changes apply to the whole layer (backward compat behavior)",
+        "When not editing text, changes apply to the whole layer (current behavior)",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Use getFormattingAtSelection() to determine what to show. When the user changes a value, call applyTextFormatting(). The tricky UX: when cursor is a point (selStart === selEnd), formatting changes should apply to the run at that position, or if nothing is selected, to the whole layer. Figma applies point-cursor formatting to the 'next typed character' — that's a stretch goal."
+    },
+    {
+      "id": "US-408",
+      "title": "Inline formatting toolbar on text selection",
+      "description": "As a user, I want a floating formatting toolbar to appear near my text selection for quick bold/italic/color changes.",
+      "acceptanceCriteria": [
+        "When text is selected during inline editing, show a floating toolbar above the selection",
+        "Toolbar shows: Bold toggle (B), Italic toggle (I), font size +/-, color picker swatch",
+        "Bold toggle applies fontWeight: 700 to selection (or removes override if already bold)",
+        "Italic toggle applies fontStyle: 'italic' to selection (or removes if already italic)",
+        "Font size +/- adjusts fontSize by 2px for the selection",
+        "Color swatch opens a small color picker for the selection",
+        "Toolbar is positioned in screen space near the selection, accounting for zoom and pan",
+        "Toolbar disappears when selection is collapsed to a cursor",
+        "Toolbar doesn't overlap the text being edited (appears above or below)",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "This is the Figma-like floating toolbar. Position it using measureCursorPosition() for the selection start/end, convert to screen coords, place above. Use a portal to render outside the SVG overlay. Style it like the existing UI (dark bg, rounded, small buttons). Keep it simple — the full formatting is in the Props panel."
+    },
+    {
+      "id": "US-409",
+      "title": "Keyboard shortcuts for text formatting",
+      "description": "As a user, I want Ctrl+B for bold, Ctrl+I for italic, and other standard formatting shortcuts while editing text.",
+      "acceptanceCriteria": [
+        "Ctrl/Cmd+B toggles bold (fontWeight 700 <-> layer default or 400) for current selection",
+        "Ctrl/Cmd+I toggles italic (fontStyle 'italic' <-> 'normal') for current selection",
+        "Ctrl/Cmd+U toggles underline (textDecoration 'underline' <-> 'none') for current selection",
+        "Shortcuts only fire when editingTextLayerId is set (inline editing mode)",
+        "Shortcuts work with both Ctrl (Windows/Linux) and Cmd (Mac)",
+        "If no selection range (just cursor), toggle sets the 'pending format' for next typed character",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Handle in inline-text-editor.tsx onKeyDown. The 'pending format' concept: when cursor is a point and user presses Ctrl+B, the next character typed should be bold. Store this as pendingFormat: Partial<TextRun> | null in the editor's local state. When a character is typed, apply pendingFormat to a new run for that character."
+    },
+    {
+      "id": "US-410",
+      "title": "Run-aware selection highlights in inline editor",
+      "description": "As a user, I want the selection highlight in the inline text editor to correctly cover text with mixed sizes and formatting.",
+      "acceptanceCriteria": [
+        "Selection highlight rectangles account for varying line heights (taller rect for lines with bigger text)",
+        "Selection highlight rectangles account for varying character widths across runs",
+        "Cursor caret height matches the font size of the run at the cursor position",
+        "Selection across run boundaries renders seamlessly (no gaps or overlaps)",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "The inline-text-editor.tsx builds selection rects by measuring characters. Update this to use the TextLine layout from US-403. Each segment has a known width and position, so selection rects can be computed from the layout. The caret height should be the lineHeight of the run at the cursor position."
+    },
+    {
+      "id": "US-411",
+      "title": "Text decoration rendering (underline, strikethrough)",
+      "description": "As a user, I want underline and strikethrough decorations to render on the canvas for text runs that have them.",
+      "acceptanceCriteria": [
+        "Runs with textDecoration: 'underline' render a line below the text baseline",
+        "Runs with textDecoration: 'strikethrough' render a line through the middle of the text",
+        "Decoration line color matches the run's fill color",
+        "Decoration line thickness scales with font size (1px at 16px, proportional at other sizes)",
+        "Decorations respect rotation and scaling transforms",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "Render decorations in renderTextLayer after fillText for each run. Underline Y = baseline + descent * 0.2. Strikethrough Y = baseline - fontSize * 0.3. Use ctx.fillRect for the line. Line thickness = Math.max(1, fontSize / 16)."
+    },
+    {
+      "id": "US-412",
+      "title": "Typing inserts text with current run formatting",
+      "description": "As a user, I want text I type to inherit the formatting of the run at my cursor position, or use pending formatting if set.",
+      "acceptanceCriteria": [
+        "Typing a character inserts it into the run at the current cursor position",
+        "The new character inherits the formatting of the run it's inserted into",
+        "If pendingFormat is set (from Ctrl+B etc. at a point cursor), the new character creates a new run with that formatting",
+        "Backspace/Delete correctly removes characters and merges adjacent runs if they become identical",
+        "Pasting plain text inserts into the current run (no run splitting)",
+        "Typing at a run boundary inserts into the left run (convention matches Figma)",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "The inline-text-editor handles input via onInput on the hidden textarea. Currently it just updates content as a flat string. Now it needs to: 1) Find which run the cursor is in, 2) Insert/delete characters in that run's text, 3) Update the layer's runs array. Create insertTextAtCursor(runs, index, text, pendingFormat?) and deleteTextAtRange(runs, start, end) helpers in rich-text-utils.ts."
+    },
+    {
+      "id": "US-413",
+      "title": "Undo/redo preserves run-level formatting",
+      "description": "As a user, I want undo/redo to correctly restore text formatting state, not just the plain text content.",
+      "acceptanceCriteria": [
+        "TextLayer snapshots include the full runs array",
+        "Undo after applying bold to a selection restores the original runs",
+        "Redo re-applies the formatting",
+        "The snapshot includes textSelection state for proper cursor restoration",
+        "History compression: adjacent typing actions within the same run are batched into one undo entry",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "The history system already snapshots TextLayer. Since runs is a new field on TextLayer, it should be included automatically in LayerSnapshot. Verify the snapshot/restore path handles runs correctly. The history push already happens on first edit (snapshotPushedRef in inline-text-editor). No major changes expected here — just verification."
+    }
+  ]
+}

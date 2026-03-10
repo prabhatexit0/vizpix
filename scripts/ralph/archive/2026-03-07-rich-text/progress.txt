@@ -1,0 +1,125 @@
+# Ralph Progress Log
+Started: Sat Mar  7 03:07:54 IST 2026
+---
+## US-401: Add TextRun type and migrate TextLayer data model ✅
+- Added TextRun interface to types.ts with per-run formatting overrides
+- Added runs: TextRun[] field to TextLayer interface
+- Updated addTextLayer() to create layers with runs: [{ text: '' }]
+- Created lib/rich-text-utils.ts with getPlainText, runsFromPlainText, splitRunsAtIndex, migrateTextLayerRuns
+- Updated updateTextProperties() to sync content→runs
+- Updated VPD save/load with migration for old layers without runs
+- Updated deepCloneLayer to clone runs array
+- Lint passes, browser test confirms text creation still works
+---
+## US-402: Run-aware text rendering on canvas ✅
+- Refactored renderTextLayer to use layer.runs instead of flat content/font props
+- Added helper functions: resolveRunFont, splitRunsToLines, measureRunLines
+- Each run renders with its own resolved formatting (fontSize, fontFamily, fontWeight, fontStyle, fill, letterSpacing)
+- Non-boxWidth text splits runs into lines by \n, renders segments left-to-right with correct horizontal offsets
+- Gradient fills use composite approach with per-run font settings
+- BoxWidth text uses flat rendering path (run-aware wrapping deferred to US-403)
+- Empty runs are skipped during rendering
+- Lint passes, browser test confirms single-run text renders identically to before
+---
+## US-403: Run-aware text measurement and line wrapping ✅
+- Created layoutTextRuns() in rich-text-utils.ts — shared layout engine returning TextLine[] with RunSegment[]
+- Handles both newline-split (non-boxWidth) and word-wrap (boxWidth) modes with per-run fonts
+- Word wrapping groups consecutive word atoms across runs so cross-run words don't break
+- Updated measureTextLayer() in layer-utils.ts to use layoutTextRuns for correct multi-run dimensions
+- Updated measureCursorPosition() to walk run segments with per-run font measurement
+- Updated findCursorIndexFromLocal() to iterate segments with per-run font for accurate click-to-cursor
+- Updated renderTextLayer() in layer-render.ts to use layoutTextRuns for both boxWidth and non-boxWidth paths
+- Removed old flat rendering path (renderTextLayerFlat, wrapText, splitLinesWithOffsets, createTextMeasureCtx)
+- Removed old run helpers from renderer (splitRunsToLines, measureRunLines) — now uses shared layout
+- Added RunSegment and TextLine types, resolveRunFont helper exported from rich-text-utils
+- Lint and typecheck pass
+---
+## US-404: Run-aware cursor positioning and click-to-cursor ✅
+- measureCursorPosition() now returns fontSize and lineHeight of the run at cursor position
+- Caret height scales to the run's font size instead of using layer.fontSize
+- Selection highlight rectangles use actual per-line lineHeight from the layout engine
+- findCursorIndexFromLocal() already used per-run fonts from US-403, no changes needed
+- Clicking between runs already places cursor at correct boundary from US-403
+- Lint passes, browser test confirms text editing works correctly
+---
+## US-405: Selection-aware formatting: split and apply to runs ✅
+- Added applyFormattingToSelection(runs, selStart, selEnd, props) — splits runs at selection boundaries, applies formatting overrides, merges adjacent identical runs
+- Added removeFormattingFromSelection(runs, selStart, selEnd, keys) — removes specified formatting overrides from selected range
+- Added getFormattingAtSelection(runs, selStart, selEnd) — returns common formatting across selection or marks mixed: true when runs differ
+- Added helper: mergeAdjacentRuns() and runsHaveSameFormatting() for run consolidation
+- Pure data manipulation, no UI changes — all functions in rich-text-utils.ts
+- Lint and typecheck pass
+---
+## US-406: Store: track text selection range and formatting commands ✅
+- Added TextSelection interface and textSelection state to ToolsSlice
+- Added setTextSelection(sel) action to update selection in store
+- Added applyTextFormatting(layerId, props) action that calls applyFormattingToSelection on layer runs using current textSelection
+- InlineTextEditor syncs textarea.selectionStart/End to store on every: onSelect, onInput, click-to-cursor, Ctrl+A, and mount (select all)
+- textSelection cleared on commit (Enter/blur) and Escape
+- setActiveTool and setEditingTextLayerId(null) also clear textSelection
+- Lint and typecheck pass, browser test confirms text editing still works
+---
+## US-407: Properties panel: selection-aware formatting controls ✅
+- Added textSelection and applyTextFormatting hooks to PropertiesPanel
+- Computed selectionFormatting via getFormattingAtSelection() when editing text with a range selection
+- Font, Size, Weight, Style, and Color controls now show selection formatting when a range is selected
+- Mixed values show "(Mixed)" indicator in the label
+- Changes route through applyTextFormatting() for selection, updateTextProperties() for whole layer
+- Fill Type remains whole-layer only (complex gradient types don't map to per-run fills)
+- When no range selection (cursor only) or not editing, existing whole-layer behavior preserved
+- Lint and typecheck pass, browser test confirms panel renders correctly
+---
+## US-408: Inline formatting toolbar on text selection ✅
+- Created TextFormatToolbar component in canvas/text-format-toolbar.tsx
+- Toolbar appears above the text selection when a range is selected during inline editing
+- Shows: Bold toggle (B), Italic toggle (I), font size +/- by 2px, color picker swatch
+- Bold/Italic toggles use active state styling (blue highlight) when format is active
+- Font size displayed between +/- buttons
+- Color picker uses hidden input[type=color] triggered by a color swatch button
+- All buttons use onMouseDown preventDefault to avoid stealing textarea focus
+- Toolbar positioned using measureCursorPosition() at selection start, converted to screen coords
+- Toolbar auto-hides when selection is collapsed to a cursor (cursorIndex === selectionEnd)
+- Integrated into InlineTextEditor as a sibling to selection highlights and caret
+- Lint and typecheck pass, browser test confirms text creation/editing still works
+---
+## US-409: Keyboard shortcuts for text formatting ✅
+- Added Ctrl/Cmd+B to toggle bold (fontWeight 700 <-> 400) for current selection
+- Added Ctrl/Cmd+I to toggle italic (fontStyle 'italic' <-> 'normal') for current selection
+- Added Ctrl/Cmd+U to toggle underline (textDecoration 'underline' <-> 'none') for current selection
+- Shortcuts only fire during inline text editing (editingTextLayerId set)
+- Work with both Ctrl (Windows/Linux) and Cmd (Mac) via e.ctrlKey || e.metaKey
+- For range selections: uses applyTextFormatting from store, toggles based on getFormattingAtSelection
+- For point cursor (no range): sets pendingFormat local state for next typed character
+- pendingFormat applied on next character insert via run splitting, cleared after use
+- Exported mergeAdjacentRuns from rich-text-utils.ts for run consolidation in pending format flow
+- Lint and typecheck pass, browser test confirms text editing still works
+---
+## US-410: Run-aware selection highlights in inline editor ✅
+- Added getSelectionRects() to layer-utils.ts — computes selection rectangles from TextLine/RunSegment layout
+- Replaced char-by-char measureCursorPosition() loop with layout-based approach in inline-text-editor.tsx
+- Selection highlight rects now use per-line lineHeight (taller for lines with bigger text)
+- Selection widths computed from per-run font measurements via segments
+- Cursor caret height already uses run fontSize from US-404 — no change needed
+- Selection across run boundaries renders seamlessly using segment boundaries
+- Lint and typecheck pass, browser test confirms text editing works
+---
+## US-411: Text decoration rendering (underline, strikethrough) ✅
+- Added renderDecoration() helper in layer-render.ts for underline and strikethrough lines
+- Underline renders at y + fontSize * 0.9 (below baseline), strikethrough at y + fontSize * 0.35 (mid-height)
+- Decoration line thickness scales with font size: Math.max(1, fontSize / 16)
+- Decorations rendered after fillText in both solid fill and gradient fill paths
+- Decoration color matches run's fill color (solid path uses existing fillStyle, gradient path composites)
+- Decorations respect rotation/scaling since they render in the same transformed context
+- Lint and typecheck pass, browser test confirms normal text still renders correctly
+---
+## US-412: Typing inserts text with current run formatting ✅
+- Added insertTextAtCursor(runs, index, text, pendingFormat?) to rich-text-utils.ts — inserts text into the run at cursor position, inheriting that run's formatting
+- Added deleteTextAtRange(runs, start, end) to rich-text-utils.ts — removes characters within runs and merges adjacent identical runs
+- At run boundaries, insertion goes into the left run (matching Figma convention)
+- Pending format from Ctrl+B/I/U creates a new run with that formatting for typed characters
+- Updated onInput handler to detect insert/delete/replacement and use run-aware helpers instead of flat updateTextProperties
+- Selection replacement handled by deleting selected range then inserting new text
+- Pasting plain text inserts into the current run via the same insertion path
+- Removed unused updateTextProperties dependency from inline-text-editor
+- Lint and typecheck pass, browser test confirms text creation and editing work correctly
+---

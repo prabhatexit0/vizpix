@@ -1,0 +1,8 @@
+# Ralph Progress Log
+Started: Sat Mar  7 2026 (production-polish run)
+---
+## Pre-Ralph Fixes (applied manually before this run)
+- Fixed critical text layer creation bug: setActiveTool('pointer') after addTextLayer() was triggering cleanupEmptyTextLayer() which deleted the just-created empty text layer. Fixed by using setState directly for text tool switch.
+- Added overflow-y-auto to properties-panel.tsx root div
+- Added dimension-change check to editor-canvas.tsx resize() to skip no-op resizes (reduces canvas clear flash)
+---

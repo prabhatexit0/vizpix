@@ -1,0 +1,69 @@
+# Ralph Progress Log
+Started: Sat Mar  7 02:36:00 IST 2026
+---
+
+## US-301: Fix double-click text creation positioning ✅
+- Clamped text layer position to document bounds with 10px padding in use-canvas-interactions.ts
+- Fixed text tool click to use click position instead of defaulting to (0,0)
+- Properties panel now shows document-relative coordinates (0,0 = top-left) instead of center-origin
+- Commit: e28504c
+
+## US-302: Fix SVG overlay intercepting canvas pointer events ✅
+- Hidden TransformHandles during text editing (InlineTextEditor has its own bounding box)
+- Added double-click detection in TransformHandles to forward to text editing for text layers
+- Added explicit pointer-events="none" on non-interactive SVG elements
+- Removed force:true from browser test
+- Commit: f1d72ec
+
+## US-303: Fix text layer thumbnail rendering ✅
+- Custom text thumbnail: renders text at 11px with proper clipping instead of scaling full layer
+- Background contrasts with text color (light/dark detection)
+- Empty text layers still show Type icon fallback
+- Commit: 8f89e00
+
+## US-304: Add selection outline to selected layers ✅
+- Increased stroke width to 1.5 and opacity to 0.8 for better visibility
+- Hidden SelectionOutline during inline text editing
+- Commit: a6238ab
+
+## US-305: Improve toolbar visual hierarchy and spacing ✅
+- Solid blue background for active tool (bg-blue-600 instead of bg-blue-500/30)
+- More visible DRAW label (10px, semibold, neutral-400)
+- Reorganized groups: pointer tools | DRAW tools | actions | undo/redo | canvas/export
+- Commit: 42bacbe
+
+## US-306: Fix canvas area not filling available space on initial load ✅
+- Double rAF in App.tsx handleCanvasApply to ensure layout is settled before fitToDocument
+- Commit: 164e052
+
+US-307: Add contextual empty state for adjust panel (6c5ea6a)
+- Show 'Adjustments are only available for image layers' when non-image layer selected
+- Show 'Select an image layer to adjust' when no layer selected
+- Added icon and centered layout for empty state
+
+US-308: Fix new canvas dialog preview aspect ratio (dc78e0f)
+- Increased preview max dimension from 120px to 160px for clearer aspect ratio
+- Added dark container background (bg-neutral-900/50) with rounded corners
+- Preview rectangle now has shadow and rounded corners for polish
+
+US-309: Add loading state for WASM initialization (5bd8773)
+- Added wasmReady gate in App.tsx before showing canvas size page or editor
+- Shows spinning loader with 'Loading engine…' text on dark background
+- Prevents interaction with editor before WASM is ready
+
+US-310: Fix properties panel input focus stealing keyboard shortcuts (422bb2c)
+- Added contentEditable check to keyboard shortcut guard in use-keyboard-shortcuts.ts
+- INPUT, TEXTAREA, SELECT, and contentEditable elements now all block shortcuts
+
+US-311: Add drag-to-reorder layers in layers panel (c147244)
+- Made layer items draggable with HTML5 drag and drop
+- Blue indicator line shows drop position between layers
+- Drop calls reorderLayers to update stack order
+- Works for root-level layers
+
+US-312: Add confirmation dialog for destructive actions (f181db4)
+- Added pendingDeleteLayerId to ToolsSlice store
+- Layer item trash button checks if it's the last layer before deleting
+- Keyboard Delete/Backspace also checks layer count
+- ConfirmDialog rendered in EditorLayout with clear messaging
+- Non-last layer deletes proceed immediately without confirmation

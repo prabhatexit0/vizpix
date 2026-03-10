@@ -1,0 +1,213 @@
+{
+  "project": "VizPix",
+  "branchName": "ralph/slider-ux",
+  "description": "Slider and fine-tuning UX overhaul. Replace plain number inputs with scrub-enabled inputs, add slider+input combos, drag-on-label scrubbing, arrow key stepping, and better color pickers. Make precise adjustments intuitive like Figma/Photoshop.",
+  "userStories": [
+    {
+      "id": "US-501",
+      "title": "Create ScrubInput component — drag-on-label to adjust values",
+      "description": "As a user, I want to click-and-drag on a property label to scrub its numeric value, like Figma's inputs.",
+      "acceptanceCriteria": [
+        "Create components/ui/scrub-input.tsx — a compound component with a label and numeric input",
+        "Clicking and dragging horizontally on the label changes the value proportionally",
+        "Default sensitivity: 1px drag = 1 unit change. Hold Shift for 10x speed. Hold Alt/Option for 0.1x precision",
+        "Cursor changes to ew-resize on label hover to indicate scrubbing is available",
+        "The label should highlight (blue text) while actively scrubbing",
+        "Value is committed on mouseup (pushes undo snapshot)",
+        "The input field next to the label still works as a normal editable number input",
+        "Arrow Up/Down in the input increments/decrements by step (default 1). Shift+Arrow = 10x step",
+        "Enter key commits the value. Escape reverts to the value before editing",
+        "Props: label, value, onChange, onCommit, min, max, step, precision (decimal places), suffix (like 'px' or '%' or '°')",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "This is the foundation component. Use pointer capture for smooth drag across the screen. Track delta from pointerdown position. The label and input should be in a flex row. Styling: dark bg, compact h-7, text-xs. Match existing input styling."
+    },
+    {
+      "id": "US-502",
+      "title": "Create SliderInput component — slider + number input combo",
+      "description": "As a user, I want a slider with an editable number input for properties like opacity, corner radius, and rotation.",
+      "acceptanceCriteria": [
+        "Create components/ui/slider-input.tsx — combines a Radix Slider with a ScrubInput",
+        "Slider and input are synced: dragging slider updates input, typing in input moves slider thumb",
+        "Slider fills available width, input has fixed width on the right",
+        "Supports min, max, step props that apply to both slider and input",
+        "onValueChange fires on every slider drag frame (for live preview)",
+        "onValueCommit fires on slider release and input blur/Enter (for undo snapshot)",
+        "Optional: show the label above with scrub-on-label functionality (reuses ScrubInput label logic)",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Layout: label row on top (with scrub), slider below spanning full width, number input to the right of slider. Use the existing Slider component from components/ui/slider.tsx. The input should be w-14 to show 3-4 digits."
+    },
+    {
+      "id": "US-503",
+      "title": "Replace transform inputs with ScrubInput — position, scale, rotation",
+      "description": "As a user, I want to scrub position X/Y, scale, and rotation values by dragging on their labels.",
+      "acceptanceCriteria": [
+        "X, Y inputs use ScrubInput with step=1, no min/max",
+        "Scale X, Scale Y use ScrubInput with step=0.01, min=0.01, precision=2",
+        "Rotation uses ScrubInput with step=1, suffix='°', wraps at 360",
+        "Scrubbing X/Y is fast: dragging the label moves the layer in real-time on the canvas",
+        "Undo snapshot is pushed once at the start of a scrub, not on every pixel",
+        "All existing keyboard input (typing values directly) still works",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Replace the current Input type=number fields in properties-panel.tsx (lines ~142-228). The onCommit callback should call pushSnapshot before the first change, then batch all scrub changes into one undo entry."
+    },
+    {
+      "id": "US-504",
+      "title": "Replace opacity control with SliderInput",
+      "description": "As a user, I want the opacity control to show a slider AND an editable input with scrub-on-label.",
+      "acceptanceCriteria": [
+        "Opacity uses SliderInput with min=0, max=100, step=1, suffix='%'",
+        "Label shows 'Opacity' and is scrubbable",
+        "Slider shows the current value with a blue fill",
+        "Input shows the numeric percentage value and is directly editable",
+        "Real-time preview while scrubbing (no flicker)",
+        "Undo snapshot pushed on commit (slider release or input blur)",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Replace the current Slider-only opacity control. Currently opacity shows 'Opacity — 75%' as label with just a slider below. The new layout should be the SliderInput combo."
+    },
+    {
+      "id": "US-505",
+      "title": "Add SliderInput for shape corner radius",
+      "description": "As a user, I want a slider for corner radius instead of just a number input.",
+      "acceptanceCriteria": [
+        "Corner radius uses SliderInput with min=0, max=half the smaller dimension, step=1, suffix='px'",
+        "Max updates dynamically when shape size changes",
+        "The slider makes it easy to go from sharp corners (0) to fully rounded (max)",
+        "Existing number input behavior preserved",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Corner radius is currently a plain Input type=number. Adding a slider makes it much more discoverable and intuitive."
+    },
+    {
+      "id": "US-506",
+      "title": "Add ScrubInput for text font size and spacing properties",
+      "description": "As a user, I want to scrub font size, line height, and letter spacing by dragging on their labels.",
+      "acceptanceCriteria": [
+        "Font Size uses ScrubInput with step=1, min=1, suffix='px'",
+        "Line Height uses ScrubInput with step=0.05, min=0.5, max=5, precision=2",
+        "Letter Spacing uses ScrubInput with step=0.1, min=-10, max=50, precision=1, suffix='px'",
+        "Scrubbing font size updates the canvas text in real-time",
+        "Scrubbing line height updates spacing between lines in real-time",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "These are the most commonly adjusted text properties. Scrub makes them much faster to fine-tune than typing numbers."
+    },
+    {
+      "id": "US-507",
+      "title": "Add SliderInput for shape stroke width",
+      "description": "As a user, I want a slider for stroke width to easily adjust it visually.",
+      "acceptanceCriteria": [
+        "Stroke Width uses SliderInput with min=0, max=50, step=0.5, suffix='px'",
+        "Slider goes from 0 (no stroke visible) to 50px",
+        "Input allows typing larger values beyond slider max",
+        "Real-time canvas preview while scrubbing",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Stroke width is currently a plain number input. A slider helps users find the right width quickly."
+    },
+    {
+      "id": "US-508",
+      "title": "Improve color picker — add HSL sliders and preset swatches",
+      "description": "As a user, I want a better color picker with hue/saturation/lightness sliders and preset color swatches instead of just a hex input.",
+      "acceptanceCriteria": [
+        "Create components/ui/color-picker.tsx as a popover panel",
+        "Shows a saturation/brightness square (SV plane) at the top",
+        "Hue slider below the square (full 0-360 spectrum bar)",
+        "Alpha/opacity slider below hue (checkerboard background showing transparency)",
+        "Hex input at the bottom for direct entry (with # prefix)",
+        "Row of 8-10 preset swatches: black, white, red, orange, yellow, green, blue, purple, pink, gray",
+        "Clicking a swatch applies that color immediately",
+        "The current native <input type=color> is replaced with this custom picker",
+        "Popover opens on click of color swatch, closes on outside click",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "The current color picker is a native browser <input type=color> which is ugly and inconsistent across browsers. A custom HSL picker gives us full control. Render the SV square using a canvas or CSS gradient overlay. Hue bar is a horizontal rainbow gradient slider."
+    },
+    {
+      "id": "US-509",
+      "title": "Add input focus management — select-all on focus, tab between inputs",
+      "description": "As a user, I want clicking a number input to select all text so I can immediately type a new value, and Tab to move between inputs.",
+      "acceptanceCriteria": [
+        "Clicking/focusing a ScrubInput or SliderInput number field selects all text",
+        "Tab key moves focus to the next input in the properties panel",
+        "Shift+Tab moves to the previous input",
+        "Inputs don't steal keyboard shortcuts while focused (already handled by US-310)",
+        "Clicking outside any input returns focus to the canvas",
+        "Double-click on a number input does NOT start scrubbing — it selects text for editing",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Select-all-on-focus is standard in design tools. It means you can click an input and immediately type '42' to replace the value, instead of having to select-all manually first. Add tabIndex ordering to inputs."
+    },
+    {
+      "id": "US-510",
+      "title": "Add dimension inputs with constrain proportions toggle for shapes",
+      "description": "As a user, I want to see and edit width/height of shapes with a lock icon to constrain proportions.",
+      "acceptanceCriteria": [
+        "Shape layers show Width and Height ScrubInputs with step=1, min=1, suffix='px'",
+        "A chain/link icon between W and H toggles proportional constraint",
+        "When constrained: changing width adjusts height proportionally, and vice versa",
+        "Constraint state is stored per-session (not per-layer) as a UI preference",
+        "Scrubbing width/height updates the shape on canvas in real-time",
+        "The inputs show the actual pixel dimensions (width * scaleX, height * scaleY)",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Currently shape dimensions are shown as read-only. Making them editable with proportional constraints is a big UX win. The chain icon should be a small toggle between the W and H rows — on when constrained (blue), off when independent (gray)."
+    },
+    {
+      "id": "US-511",
+      "title": "Improve adjust panel sliders with value input and reset-on-double-click",
+      "description": "As a user, I want the adjust panel sliders to have editable value inputs and reset to default on double-click.",
+      "acceptanceCriteria": [
+        "Each adjust slider (brightness, contrast, etc.) uses SliderInput with its current min/max/step",
+        "Double-clicking the slider track or label resets to the default value",
+        "The X reset button is still available for non-default values",
+        "Value input shows the current numeric value and is directly editable",
+        "Labels are scrubbable (drag to adjust)",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "The adjust panel already uses Slider + value display. Upgrade to SliderInput for consistency and add double-click-to-reset UX pattern."
+    },
+    {
+      "id": "US-512",
+      "title": "Add rotation dial — visual rotation control",
+      "description": "As a user, I want a small circular dial next to the rotation input for intuitive angle adjustment.",
+      "acceptanceCriteria": [
+        "Create components/ui/rotation-dial.tsx — a 32x32px circular SVG control",
+        "A small dot on the circle indicates the current angle",
+        "Click-and-drag around the circle to rotate (maps angle from center of dial)",
+        "Hold Shift while dragging to snap to 15° increments",
+        "The dial is shown next to the rotation ScrubInput in the properties panel",
+        "Dial and input stay synced",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "A visual rotation dial gives immediate spatial feedback about the current angle. The dial is small and complementary to the numeric input. Use Math.atan2(dy, dx) from the dial center to compute the angle from pointer position."
+    }
+  ]
+}

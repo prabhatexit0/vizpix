@@ -1,0 +1,309 @@
+{
+  "project": "VizPix",
+  "branchName": "ralph/production-polish",
+  "description": "Comprehensive production polish pass: fix remaining bugs from the text UX overhaul, fix canvas/panel layout issues, round rough UX edges, and add missing quality-of-life features needed for a production-quality editor.",
+  "userStories": [
+    {
+      "id": "US-201",
+      "title": "Fix properties panel scroll — content is clipped",
+      "description": "As a user, I want to scroll the Properties panel when content overflows, so I can see all properties for any layer type.",
+      "acceptanceCriteria": [
+        "Verify properties-panel.tsx root div has overflow-y-auto (already applied — verify it works by checking the parent TabsContent also allows scrolling)",
+        "TabsContent in right-panel.tsx must not have overflow-hidden that clips the scroll — change to overflow-y-auto or remove overflow-hidden from the tab content wrapper",
+        "Layers panel, Properties panel, and Adjust panel should all scroll independently when content overflows",
+        "Scroll position resets when switching tabs",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "The outer flex-1 overflow-hidden div in right-panel.tsx line 45 clips all tab content. The PropertiesPanel has many sections (position, scale, rotation, opacity, blend mode, dimensions, type-specific props, mask, histogram) that overflow on smaller panels. Change the wrapper to allow child-controlled overflow."
+    },
+    {
+      "id": "US-202",
+      "title": "Fix canvas flicker during right panel resize",
+      "description": "As a user, I want to resize the right panel by dragging without the canvas flickering to black.",
+      "acceptanceCriteria": [
+        "Verify editor-canvas.tsx resize() skips when dimensions haven't changed (already applied)",
+        "Add will-change: transform to the canvas container div to promote GPU layer and prevent paint flicker",
+        "During active panel drag, throttle ResizeObserver callback to requestAnimationFrame to avoid multiple resizes per frame",
+        "Canvas does not flash black during panel resize — test by rapidly dragging the resize handle",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "ResizeObserver fires synchronously on layout shift. Setting canvas.width clears the canvas buffer instantly. The RAF-throttle ensures resize + composite happen together in the same frame."
+    },
+    {
+      "id": "US-203",
+      "title": "Round dimension display in properties panel",
+      "description": "As a user, I want dimensions shown as clean integers, not floating point numbers with 15 decimal places.",
+      "acceptanceCriteria": [
+        "In properties-panel.tsx dimensions display, round width and height to integers using Math.round()",
+        "In layer-item.tsx image dimensions display, round width and height to integers",
+        "All numeric displays in the properties panel show at most 2 decimal places",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "measureTextLayer returns fractional values. The dimensions display at properties-panel.tsx shows raw floats like '33.599999999999994'. Simple Math.round() fix."
+    },
+    {
+      "id": "US-204",
+      "title": "Fix text layer thumbnail rendering in layers panel",
+      "description": "As a user, I want to see a preview of my text layer content in the layers panel thumbnail.",
+      "acceptanceCriteria": [
+        "In layer-item.tsx thumbnail rendering, for text layers the scale factor should be calculated based on the measured text dimensions, not hardcoded 0.12",
+        "Text with black fill on a dark thumbnail background should have a white or light background for contrast",
+        "Empty text layers show the Type icon instead of a blank canvas",
+        "Thumbnail re-renders when content, fontSize, fontFamily, or fill changes",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "The current thumbnail uses ctx.scale(0.12, 0.12) which is too small for text — text at 24px becomes ~3px in the thumbnail. Need to calculate proper scale to fit text in 32x32."
+    },
+    {
+      "id": "US-205",
+      "title": "Add tooltip labels to all toolbar buttons",
+      "description": "As a user, I want to see what each tool does when I hover over it, including the keyboard shortcut.",
+      "acceptanceCriteria": [
+        "Every button in toolbar.tsx has a Tooltip wrapper showing the tool name and keyboard shortcut",
+        "Format: 'Tool Name (K)' where K is the shortcut key, e.g. 'Text (T)', 'Pointer (V)', 'Hand (H)'",
+        "Tooltips use the existing Tooltip component from components/ui/tooltip.tsx",
+        "TooltipProvider is already wrapped in editor-layout.tsx — use that context",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Currently toolbar buttons have no tooltips or accessible labels. The ARIA snapshot shows buttons with only img children and no labels. This is both a UX and accessibility issue."
+    },
+    {
+      "id": "US-206",
+      "title": "Fix text layer rendering to use correct font",
+      "description": "As a user, I want my text layers to render in the font I selected, not fall back to a serif font.",
+      "acceptanceCriteria": [
+        "Ensure the Inter font is loaded before rendering text layers — add a Google Fonts import for Inter in index.html or index.css",
+        "If fontFamily is a web-safe font (Arial, Helvetica, Georgia, etc.), it should render immediately without loading",
+        "Add a font loading check using document.fonts.check() before measuring text in measureTextLayer and measureCursorPosition",
+        "If font isn't loaded yet, trigger document.fonts.load() and re-render when ready",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Text renders in default serif because Inter font isn't loaded. Canvas 2D context falls back to browser default serif when specified font is unavailable. Need to either load Inter or ensure system fonts work."
+    },
+    {
+      "id": "US-207",
+      "title": "Add keyboard shortcut overlay (? key)",
+      "description": "As a user, I want to press ? to see all available keyboard shortcuts.",
+      "acceptanceCriteria": [
+        "Pressing ? (shift+/) when not editing text shows a keyboard shortcut overlay/dialog",
+        "Dialog lists all shortcuts: V (Pointer), H (Hand), Z (Zoom), C (Crop), R (Rectangle), E (Ellipse), T (Text), Delete (Remove layer), Ctrl+Z (Undo), Ctrl+Shift+Z (Redo), Ctrl+C/V/X (Clipboard), Enter (Edit text), Escape (Stop editing), +/- (Zoom), Ctrl+0 (Fit)",
+        "Dialog can be closed with Escape or clicking outside",
+        "Use the existing Dialog component from components/ui/dialog.tsx",
+        "Add the state and handler in use-keyboard-shortcuts.ts, render the dialog in editor-canvas.tsx or editor-layout.tsx",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Tool discoverability is currently poor. A keyboard shortcut reference makes the editor much more usable."
+    },
+    {
+      "id": "US-208",
+      "title": "Fix layers panel auto-switch when deselecting to go back to layers tab",
+      "description": "As a user, I want to see the layers panel when I click on empty canvas (deselect), not stay on a properties panel that says 'Select a layer'.",
+      "acceptanceCriteria": [
+        "Verify the subscribe effect in editor-store.ts correctly switches from properties to layers when activeLayerId becomes null",
+        "Test: select a layer (should auto-switch to properties), click empty canvas (should switch back to layers)",
+        "If the user manually chose the adjust tab, deselecting should switch to layers (adjust without a layer is useless)",
+        "The subscribe effect should not fire during initialization/mount",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "The subscribe effect from US-103 may not be working correctly. Need to verify and fix. The effect should be: null→layer = switch to properties, layer→null = switch to layers."
+    },
+    {
+      "id": "US-209",
+      "title": "Add Ctrl+A to select all text during inline editing",
+      "description": "As a user, I want Ctrl+A while editing text to select all text in the layer, not trigger a browser default.",
+      "acceptanceCriteria": [
+        "In inline-text-editor.tsx onKeyDown, handle Ctrl+A to select all text in the hidden textarea",
+        "After Ctrl+A, cursorIndex and selectionEnd should span the full content",
+        "Selection highlights should update to show the full text selected",
+        "Ctrl+A when NOT editing text should be a no-op (don't select all layers — that's a future feature)",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "The hidden textarea gets Ctrl+A natively, but cursorIndex/selectionEnd states may not update since it goes through the textarea's selection, not our onSelect handler."
+    },
+    {
+      "id": "US-210",
+      "title": "Fix transform handles disappearing during text editing",
+      "description": "As a user, I want to see and use transform handles on a text layer while editing it, so I can resize the textbox.",
+      "acceptanceCriteria": [
+        "In editor-canvas.tsx, show TransformHandles when editingTextLayerId is set (currently hidden because activeTool check blocks it)",
+        "Transform handles should be visible during inline text editing",
+        "Dragging transform handles during text editing should resize boxWidth/boxHeight, not move the layer",
+        "The transform handles should not steal focus from the hidden textarea",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "editor-canvas.tsx line 131 only shows TransformHandles when activeTool === 'pointer'. During text editing, activeTool IS 'pointer' but the handles may conflict with the text editor. Need to verify handles work during editing."
+    },
+    {
+      "id": "US-211",
+      "title": "Add double-click on canvas to create text at click point",
+      "description": "As a user, I want to double-click on empty canvas with pointer tool to quickly create a text layer there.",
+      "acceptanceCriteria": [
+        "In use-canvas-interactions.ts, when double-clicking on empty canvas (no layer hit) with pointer tool, create a text layer at that position",
+        "The new text layer should immediately enter editing mode",
+        "This should NOT conflict with double-click to edit existing text (only triggers when hitId is null)",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "This is a common design tool pattern (Figma, Canva) — double-click empty space to create text. Makes text creation much faster than switching to text tool first."
+    },
+    {
+      "id": "US-212",
+      "title": "Add visual feedback when hovering over layers in layers panel",
+      "description": "As a user, I want to see which layer I'll select when I click in the layers panel.",
+      "acceptanceCriteria": [
+        "Layer items in layers-panel already have hover:border-white/12 hover:bg-white/4 — verify this works",
+        "Add cursor:pointer to layer items (already has cursor-pointer class — verify)",
+        "When hovering a layer item, show that layer highlighted on the canvas with a subtle outline (optional, lower priority)",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "Basic hover feedback is already in the CSS. This story is about verifying it works and optionally adding canvas hover preview."
+    },
+    {
+      "id": "US-213",
+      "title": "Fix undo/redo buttons disabled state",
+      "description": "As a user, I want undo/redo buttons to be visually enabled when there's history to go back/forward to.",
+      "acceptanceCriteria": [
+        "In toolbar.tsx, undo button is disabled only when canUndo() returns false",
+        "Redo button is disabled only when canRedo() returns false",
+        "After creating a layer, undo button becomes enabled",
+        "After undoing, redo button becomes enabled",
+        "Buttons use disabled styling (reduced opacity, no hover effect)",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": "From the ARIA snapshot, both undo and redo buttons show as [disabled] even after creating layers. The toolbar may not be subscribing to undo/redo stack state properly."
+    },
+    {
+      "id": "US-214",
+      "title": "Add Ctrl+D to duplicate selected layer",
+      "description": "As a user, I want to quickly duplicate a layer with a keyboard shortcut.",
+      "acceptanceCriteria": [
+        "In use-keyboard-shortcuts.ts, Ctrl+D (or Cmd+D on Mac) duplicates the active layer",
+        "Calls duplicateLayer(activeLayerId) from the store",
+        "Prevent browser default (bookmark dialog) with e.preventDefault()",
+        "Only works when a layer is selected and not editing text",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "Ctrl+D is standard in design tools for duplicate. Currently only available through right-click or menu."
+    },
+    {
+      "id": "US-215",
+      "title": "Add Backspace/Delete key to remove selected layer",
+      "description": "As a user, I want to press Delete or Backspace to remove the selected layer.",
+      "acceptanceCriteria": [
+        "In use-keyboard-shortcuts.ts, Delete and Backspace remove the active layer when not editing text and no input is focused",
+        "Calls removeLayer(activeLayerId) from the store",
+        "Does not fire when editing text (Delete/Backspace should work normally in text editing)",
+        "Does not fire when an input/textarea/select element is focused",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "The keyboard shortcuts hook already checks for INPUT/TEXTAREA/SELECT tags. Just need to add Delete/Backspace handlers."
+    },
+    {
+      "id": "US-216",
+      "title": "Fix right panel resize handle hit area — too narrow to grab",
+      "description": "As a user, I want to easily grab the panel resize handle without pixel-perfect precision.",
+      "acceptanceCriteria": [
+        "In right-panel.tsx ResizeHandle, increase the clickable area to at least 8px (currently w-1.5 = 6px)",
+        "The visual line stays thin (2px) but the hit area extends via padding or a wider transparent element",
+        "On hover, show a subtle blue line as feedback (already has hover:bg-blue-500/40)",
+        "Cursor changes to col-resize when hovering the expanded hit area",
+        "Typecheck passes"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": "6px is very narrow to click on. Use a wider transparent hit area with a thin visual indicator."
+    },
+    {
+      "id": "US-217",
+      "title": "Add canvas background toggle (checkerboard vs solid)",
+      "description": "As a user, I want to toggle the canvas background between checkerboard and a solid color to see transparent areas clearly.",
+      "acceptanceCriteria": [
+        "Add a small toggle button in the toolbar or bottom-right corner of the canvas",
+        "Default: checkerboard (current behavior)",
+        "Toggle to: solid medium gray (#808080)",
+        "Toggle to: solid black (#000000)",
+        "Cycle through the 3 options on each click",
+        "Store the preference in canvasBackground state (add to DocumentSlice or ViewportSlice)",
+        "Use-canvas-compositor reads this state when drawing the background",
+        "Typecheck passes"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": "Checkerboard can be distracting when working with transparent layers. A solid background option helps evaluate the design."
+    },
+    {
+      "id": "US-218",
+      "title": "Add zoom level indicator with click-to-reset",
+      "description": "As a user, I want to see the current zoom level and click it to reset to 100%.",
+      "acceptanceCriteria": [
+        "Show current zoom percentage in the bottom-left or bottom-right of the canvas area",
+        "Format: '100%', '50%', '200%' etc. (rounded to nearest integer)",
+        "Clicking the zoom indicator resets zoom to 100% and centers the document",
+        "Updates live during zoom/scroll",
+        "Styled subtly (small text, semi-transparent) to not distract from the canvas",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": "Current zoom level is invisible to the user. They have no idea if they're at 50% or 200%. A small indicator with click-to-reset is standard."
+    },
+    {
+      "id": "US-219",
+      "title": "Prevent canvas pointer events from bubbling to panels during drag",
+      "description": "As a user, I want dragging on the canvas to not accidentally trigger panel interactions.",
+      "acceptanceCriteria": [
+        "Canvas pointer capture (setPointerCapture) correctly prevents pointer events from reaching panel elements",
+        "Verify that dragging a layer near the right panel edge does not cause panel hover effects",
+        "Verify that pointer up after drag outside canvas still fires on the canvas element",
+        "ResizeHandle pointer capture works independently of canvas pointer capture",
+        "Typecheck passes"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": "Pointer capture is already used but may have edge cases. This is a verification and fix-if-needed story."
+    },
+    {
+      "id": "US-220",
+      "title": "Add Ctrl+Shift+Z as redo shortcut (in addition to Ctrl+Y)",
+      "description": "As a user, I want both Ctrl+Shift+Z and Ctrl+Y to work for redo.",
+      "acceptanceCriteria": [
+        "In use-keyboard-shortcuts.ts, both Ctrl+Shift+Z and Ctrl+Y trigger redo",
+        "Verify Ctrl+Z triggers undo (already works)",
+        "Check that Cmd variants work on Mac (metaKey instead of ctrlKey)",
+        "Typecheck passes"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": "Standard across all design tools. Currently may only support one shortcut."
+    }
+  ]
+}

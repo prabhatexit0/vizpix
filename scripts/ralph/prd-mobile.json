@@ -1,0 +1,214 @@
+{
+  "project": "VizPix",
+  "branchName": "ralph/mobile-support",
+  "description": "Mobile and responsive support. Adapt the editor for touch devices with gesture controls (pinch-zoom, two-finger pan, rotation), responsive panel layout, touch-friendly controls, and mobile-optimized UI. Target: usable on iPad and modern phones.",
+  "userStories": [
+    {
+      "id": "US-601",
+      "title": "Add pinch-to-zoom gesture on canvas",
+      "description": "As a mobile user, I want to pinch-to-zoom the canvas with two fingers, just like any map or image viewer.",
+      "acceptanceCriteria": [
+        "Detect two-finger touch via pointer events (track multiple pointerId values)",
+        "Pinch-in zooms out, pinch-out zooms in, centered on the midpoint between the two fingers",
+        "Zoom factor is proportional to the distance change between fingers",
+        "Smooth zooming — update on every pointermove, not just on gesture end",
+        "Works alongside existing wheel zoom (desktop unaffected)",
+        "Respects ZOOM_MIN and ZOOM_MAX constants",
+        "Canvas touch-action remains 'none' to prevent browser handling",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "Track two pointers in a Map<pointerId, {x,y}>. On pointermove, if two pointers are active, calculate distance between them. Compare to previous distance for zoom factor. Midpoint between fingers is the zoom center. Use the existing store.zoom(factor, centerX, centerY) method. Make sure to update both pointers on move to avoid jitter."
+    },
+    {
+      "id": "US-602",
+      "title": "Add two-finger pan gesture on canvas",
+      "description": "As a mobile user, I want to pan the canvas by dragging with two fingers (single finger should interact with layers).",
+      "acceptanceCriteria": [
+        "When two fingers are down, dragging moves the canvas (pan)",
+        "Pan amount tracks the midpoint movement between the two fingers",
+        "Single finger still selects/moves layers (existing behavior unchanged)",
+        "Pan and zoom can happen simultaneously during a pinch gesture",
+        "Momentum/inertia NOT required (simple 1:1 tracking is fine)",
+        "Works alongside existing hand tool and wheel pan (desktop unaffected)",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Combine with US-601's two-pointer tracking. While two pointers are active: zoom by distance change AND pan by midpoint change. Both happen in the same pointermove handler. Use store.pan(dx, dy) for the pan delta."
+    },
+    {
+      "id": "US-603",
+      "title": "Add two-finger rotation gesture for selected layer",
+      "description": "As a mobile user, I want to rotate a selected layer by twisting two fingers on it.",
+      "acceptanceCriteria": [
+        "When two fingers are down AND a layer is selected, rotation gesture rotates the selected layer",
+        "Rotation amount tracks the angle change between the two finger positions",
+        "Only activates when both fingers start on/near the selected layer (not on empty canvas)",
+        "On empty canvas, two fingers pan/zoom instead of rotate",
+        "Hold the gesture briefly (200ms) before rotation activates to avoid accidental rotation during pinch-zoom",
+        "Rotation updates in real-time on the canvas",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Use Math.atan2 to compute angle between two pointer positions. Track angle delta from previous frame. Apply via setTransform(layerId, { rotation: current + delta }). The 200ms hold prevents accidental rotation when the user just wants to pinch-zoom. Optional: snap to 0/90/180/270 when close (within 5°)."
+    },
+    {
+      "id": "US-604",
+      "title": "Responsive layout — collapsible right panel on mobile",
+      "description": "As a mobile user, I want the right panel to be a slide-over drawer instead of a fixed sidebar, so I get full-width canvas.",
+      "acceptanceCriteria": [
+        "On mobile (< 1024px): right panel renders as a Vaul Drawer sliding from the right edge",
+        "A small floating button on the right edge opens/closes the drawer (Layers/Props icon)",
+        "The drawer overlays the canvas, not pushes it",
+        "On desktop (>= 1024px): right panel renders as the current fixed sidebar (no behavior change)",
+        "useResponsive() hook drives the layout switch",
+        "The drawer auto-opens when a layer is selected (to show properties) and auto-closes on deselect",
+        "Swipe right on the drawer to dismiss it",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "The existing Vaul Drawer component is already in the project (components/ui/drawer.tsx). RightPanel already has isMobile from useResponsive(). The desktop layout stays exactly as-is. On mobile, wrap the panel content in a Drawer with direction='right'. Use an overlay with backdrop-blur."
+    },
+    {
+      "id": "US-605",
+      "title": "Mobile toolbar — compact floating bar with essential tools only",
+      "description": "As a mobile user, I want a compact floating toolbar at the bottom with only the most important tools.",
+      "acceptanceCriteria": [
+        "Mobile toolbar shows: Pointer, Rectangle, Ellipse, Text, Undo, Redo (6 buttons)",
+        "Less-used tools (hand, zoom, crop, group/ungroup) move to a '...' overflow menu",
+        "The overflow menu is a popover that shows remaining tools in a grid",
+        "Active tool is highlighted with blue background (same as desktop)",
+        "All touch targets are minimum 44x44px",
+        "Toolbar is positioned at bottom center with safe area inset padding (env(safe-area-inset-bottom))",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "The mobile toolbar already exists but shows ALL tools which is cramped. Trim to essentials + overflow. Use the existing Popover component for the overflow menu. Safe area insets handle iPhone notch/home indicator area."
+    },
+    {
+      "id": "US-606",
+      "title": "Touch-friendly layer selection and manipulation on canvas",
+      "description": "As a mobile user, I want to select layers by tapping and move them by dragging with one finger.",
+      "acceptanceCriteria": [
+        "Tap on a layer selects it (existing pointer behavior works for touch)",
+        "Drag a selected layer to move it (existing behavior works)",
+        "Long-press (500ms) on a layer shows a context menu with: Delete, Duplicate, Lock, Edit (for text)",
+        "Context menu is positioned near the touch point, clamped to viewport",
+        "Double-tap on text enters inline editing (existing dblclick handler works for touch)",
+        "Tapping on empty canvas deselects the current layer",
+        "The hit test area for layers is expanded by 8px on touch devices for easier tapping",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Most of this already works because we use Pointer Events. The main addition is the long-press context menu. Implement with a setTimeout on pointerdown, cleared on pointermove (>10px) or pointerup. Use Radix ContextMenu or a custom Popover for the menu."
+    },
+    {
+      "id": "US-607",
+      "title": "Mobile-friendly dialogs — use Drawer for all modal content",
+      "description": "As a mobile user, I want dialogs (shortcuts, canvas size, export) to be bottom-sheet drawers I can swipe to dismiss.",
+      "acceptanceCriteria": [
+        "Canvas size dialog uses Drawer on mobile (Dialog on desktop)",
+        "Shortcuts dialog uses Drawer on mobile (Dialog on desktop)",
+        "Export dialog already uses Drawer on mobile — verify it works correctly",
+        "Confirm dialog (delete layer) uses Drawer on mobile",
+        "All drawers have a visible drag handle at the top",
+        "All drawers can be dismissed by swiping down or tapping outside",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Some dialogs already have the Drawer pattern (ExportDialog). Apply the same pattern to CanvasSizeDialog, ShortcutsDialog, and ConfirmDialog. Create a shared ResponsiveDialog wrapper if it reduces duplication."
+    },
+    {
+      "id": "US-608",
+      "title": "Touch-optimized properties panel controls",
+      "description": "As a mobile user, I want larger touch targets for controls in the properties panel.",
+      "acceptanceCriteria": [
+        "All number inputs have minimum height of 44px on mobile (currently h-8 = 32px)",
+        "Select dropdowns have minimum height of 44px on mobile",
+        "Color swatches/pickers have minimum size of 44x44px on mobile",
+        "Slider thumbs are larger on mobile (20px instead of 12px) for easier grabbing",
+        "Button spacing increases on mobile (gap-3 instead of gap-2)",
+        "Use useResponsive() to conditionally apply larger sizing classes",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "The ScrubInput and SliderInput from the slider-ux branch should accept a size prop or check isMobile internally. For sliders, override the thumb size via className on mobile. Keep desktop sizes compact."
+    },
+    {
+      "id": "US-609",
+      "title": "Add mobile breakpoint for tablet (768px) and refine layout",
+      "description": "As a tablet user, I want a layout optimized for medium screens — sidebar visible but narrower.",
+      "acceptanceCriteria": [
+        "Add TABLET_BREAKPOINT = 768 to constants.ts",
+        "Update useResponsive() to return { isMobile, isTablet, isDesktop }",
+        "isMobile: < 768px (phone), isTablet: 768-1023px, isDesktop: >= 1024px",
+        "Tablet layout: toolbar as floating bottom bar (like mobile), right panel as narrower sidebar (MIN_WIDTH=200)",
+        "Phone layout: toolbar as floating bottom bar, right panel as drawer",
+        "Desktop layout: unchanged (sidebar toolbar + right panel)",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "Currently there's only one breakpoint (1024px). Adding 768px gives us a proper three-tier responsive system. Tablets can show the right panel as a sidebar since they have enough width, but the toolbar should float at the bottom since vertical space is more limited."
+    },
+    {
+      "id": "US-610",
+      "title": "Add safe area insets and PWA meta tags for mobile",
+      "description": "As a mobile user, I want the app to handle iPhone notch/home bar areas and be installable as a PWA.",
+      "acceptanceCriteria": [
+        "Add viewport-fit=cover to the viewport meta tag",
+        "All edge-positioned UI uses env(safe-area-inset-*) padding",
+        "Toolbar bottom padding accounts for safe-area-inset-bottom",
+        "Right panel drawer accounts for safe-area-inset-right",
+        "Add apple-mobile-web-app-capable meta tag for full-screen mode",
+        "Add theme-color meta tag matching the app background (#0a0a0a)",
+        "Add a basic manifest.json for PWA installability (name, icons, start_url)",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Safe area insets prevent content from being hidden behind the iPhone notch or home bar indicator. Use Tailwind's pb-[env(safe-area-inset-bottom)] or CSS custom properties. The PWA manifest is a nice bonus that makes the app installable on mobile home screens."
+    },
+    {
+      "id": "US-611",
+      "title": "Add mobile-friendly inline text editing",
+      "description": "As a mobile user, I want to edit text layers with the virtual keyboard without the UI being obscured.",
+      "acceptanceCriteria": [
+        "When inline text editing starts on mobile, scroll the canvas so the text layer is visible above the keyboard",
+        "The virtual keyboard doesn't cover the text being edited",
+        "The hidden textarea is positioned at the actual text location (iOS needs this for proper keyboard positioning)",
+        "Tapping outside the text area commits editing (existing blur handler works)",
+        "The floating toolbar (if visible) moves above the keyboard",
+        "Auto-capitalize is off for the hidden textarea on mobile (autocapitalize='off')",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": "The main challenge is the virtual keyboard obscuring the text being edited. Use window.visualViewport.height to detect keyboard presence and adjust the canvas viewport (pan up) to keep the editing text visible. Reset pan when editing ends."
+    },
+    {
+      "id": "US-612",
+      "title": "Add gesture hints and onboarding for mobile",
+      "description": "As a new mobile user, I want brief visual hints showing me the available gestures.",
+      "acceptanceCriteria": [
+        "On first mobile visit, show a brief overlay with gesture hints (3 seconds, dismissible)",
+        "Hints: 'Pinch to zoom', 'Two fingers to pan', 'Tap to select', 'Long press for options'",
+        "Each hint has a simple icon/animation (two fingers pinching, etc.)",
+        "The overlay only shows once (tracked in localStorage)",
+        "A '?' button in the mobile toolbar re-shows the gesture hints",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": "Simple overlay with 4 gesture illustrations. Use CSS animations for the finger gesture icons. Store 'gestures-shown' in localStorage to only show once. Keep it lightweight — no complex onboarding flow."
+    }
+  ]
+}
