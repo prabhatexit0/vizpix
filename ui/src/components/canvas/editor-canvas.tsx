@@ -4,6 +4,7 @@ import { useEditorStore } from '@/store'
 import { useCanvasCompositor } from '@/hooks/use-canvas-compositor'
 import { useCanvasInteractions } from '@/hooks/use-canvas-interactions'
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
+import { useResponsive } from '@/hooks/use-responsive'
 import { TransformHandles } from './transform-handles'
 import { CropOverlay } from './crop-overlay'
 import { DrawPreviewOverlay } from './draw-preview-overlay'
@@ -31,6 +32,7 @@ export function EditorCanvas() {
     dismissContextMenu,
   } = useCanvasInteractions(canvasRef)
   useKeyboardShortcuts(setTempHand, canvasRef)
+  const { isDesktop } = useResponsive()
 
   // Native non-passive wheel listener so preventDefault() actually works.
   // React's onWheel is passive and can't prevent browser zoom.
@@ -179,7 +181,9 @@ export function EditorCanvas() {
         <InlineTextEditor canvasRef={canvasRef} layerId={editingTextLayerId} viewport={viewport} />
       )}
       {contextMenu && <TouchContextMenu state={contextMenu} onDismiss={dismissContextMenu} />}
-      <div className="absolute right-2 bottom-2 z-10 flex items-center gap-1 rounded-md bg-neutral-900/80 text-xs text-neutral-400 backdrop-blur-sm">
+      <div
+        className={`absolute right-2 z-10 flex items-center gap-1 rounded-md bg-neutral-900/80 text-xs text-neutral-400 backdrop-blur-sm ${isDesktop ? 'bottom-2' : 'bottom-20'}`}
+      >
         <button
           onClick={() => setZoom(1)}
           className="px-2 py-1 transition-colors hover:text-white"
